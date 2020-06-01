@@ -157,8 +157,6 @@ type Params struct {
 	FvmParam *params.ChainConfig
 
 	Bitcoin []*BitcoinParams
-
-	Aip0Round uint32
 }
 
 // Name defines a human-readable identifier for the network.
@@ -257,7 +255,6 @@ var DevelopNetParams = Params{
 			RpcPassword: "asimov",
 		},
 	},
-	Aip0Round: 2,
 }
 
 // RegressionNetParams defines the network parameters for the regression test

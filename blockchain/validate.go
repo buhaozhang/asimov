@@ -865,9 +865,6 @@ func (b *BlockChain) checkSignaturesWeight(node *blockNode, block *asiutil.Block
 
 		weight += weightMap[preSig.Signer]
 	}
-	if header.Round >= chaincfg.ActiveNetParams.Aip0Round {
-		weight += 1
-	}
 	// verify weight
 	if header.Weight != selfWeight+weight {
 		errStr := fmt.Sprintf("Block weight verify failed, weight %d, expected %d ", header.Weight, selfWeight+weight)
