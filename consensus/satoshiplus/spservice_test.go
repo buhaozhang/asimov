@@ -185,6 +185,7 @@ func TestGetRoundInfo(t *testing.T) {
 	}
 
 	blockTime := time.Now().Unix()
+	blockTime = 0
 	roundSizei64 := int64(chaincfg.ActiveNetParams.RoundSize)
 	tests := []struct {
 		blockRound int64
@@ -268,7 +269,7 @@ func TestGetRoundInfo(t *testing.T) {
 			1,
 			blockTime + 5337,
 			12,
-			11,
+			10,
 			blockTime + 5280,
 			false,
 		}, {
@@ -295,6 +296,13 @@ func TestGetRoundInfo(t *testing.T) {
 		}, {
 			2,
 			blockTime + 76665 + common.MaxBlockInterval,
+			65,
+			0,
+			blockTime + 76665 + common.MaxBlockInterval,
+			false,
+		}, {
+			2,
+			blockTime + 76665 + common.MaxBlockInterval + 1,
 			0,
 			0,
 			0,
@@ -303,7 +311,10 @@ func TestGetRoundInfo(t *testing.T) {
 	}
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
-		round, slot, roundStartTime, err := ps.getRoundInfo(blockTime, test.blockRound, test.targetTime)
+		ps.context.RoundStartTime = blockTime
+		ps.context.RoundInterval = ps.config.RoundManager.GetRoundInterval(test.blockRound)
+		ps.context.Round = test.blockRound
+		round, slot, roundStartTime, err := ps.getRoundInfo(test.targetTime)
 		if test.wantErr != (err != nil) {
 			t.Errorf("tests #%d error: %v", i, err)
 			continue
