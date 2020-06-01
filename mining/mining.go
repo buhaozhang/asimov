@@ -494,6 +494,9 @@ func (g *BlkTmplGenerator) ProduceNewBlock(account *crypto.Account, gasFloor, ga
 		msgBlock.PreBlockSigs = append(msgBlock.PreBlockSigs, sign)
 	}
 	header.Weight = blockWeight
+	if header.Round >= chaincfg.ActiveNetParams.Aip0Round {
+		header.Weight += 1
+	}
 
 	// Now that the actual signs have been selected, update the
 	// block size for the real sign count.
