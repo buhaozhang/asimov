@@ -245,10 +245,10 @@ func (s *SPService) handleBlockTimeout() {
 func (s *SPService) handleNewBlock(chainTip ainterface.BlockNode) {
 	s.chainTip = chainTip
 
-	slot := s.context.Slot + 1
-	now := time.Now()
-	_, slotStd, _, _ := s.getRoundInfo(now.Unix())
 	if chainTip.Round() == uint32(s.context.Round) && chainTip.Slot() == uint16(s.context.Slot) {
+		slot := s.context.Slot + 1
+		now := time.Now()
+		_, slotStd, _, _ := s.getRoundInfo(now.Unix())
 		if slot-slotStd > 1 {
 			s.resetTimer(s.context.Slot)
 			return
