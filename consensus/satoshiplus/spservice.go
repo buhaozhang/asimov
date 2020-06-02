@@ -169,7 +169,7 @@ func (s *SPService) initializeConsensus() error {
 	s.resetRoundInterval()
 	s.chainTip = s.config.Chain.GetTip()
 
-	s.resetTimer()
+	s.resetTimer(s.context.Slot+1)
 
 	log.Infof("SPService initializeConsensus round: %v, slot: %v, roundStartTime: %v", s.context.Round, s.context.Slot, s.context.RoundStartTime)
 	return nil
@@ -215,74 +215,41 @@ func (s *SPService) resetRoundInterval() bool {
 
 // when the it turns to be a validator, try to generate a new block
 func (s *SPService) handleBlockTimeout() {
-	round, slot, _, err := s.getRoundInfo(time.Now().Unix())
-	if err != nil {
-		s.blockTimer.Reset(common.DefaultBlockInterval * time.Second)
-		return
-	}
-	if round > s.context.Round {
-		roundInterval := s.context.RoundInterval
+	round,slot := s.context.Round, s.context.Slot + 1
+	if slot == s.context.RoundSize {
+		s.context.RoundStartTime = s.context.RoundStartTime + s.context.RoundInterval
+		slot = 0
+		round = round + 1
 		if !s.resetRoundInterval() {
 			s.blockTimer.Reset(common.DefaultBlockInterval * time.Second)
 			return
 		}
-		s.context.RoundStartTime = s.context.RoundStartTime + roundInterval
 	}
+
 	s.context.Slot = slot
 	s.context.Round = round
 	isTurn := s.checkTurn(slot, round, false)
-	s.resetTimer()
+	offset := s.resetTimer(s.context.Slot+1)
 
 	if isTurn {
-		chainTip := s.chainTip
-	    if chainTip.Round() < uint32(round) || chainTip.Round() == uint32(round) && chainTip.Slot() < uint16(slot) {
-			// milliseconds
-			blockInterval := float64(s.GetRoundInterval()) * 1000 / float64(s.context.RoundSize)
-			s.processBlock(time.Now().Unix(), round, slot, blockInterval)
-			return
-		}
+		// milliseconds
+		blockInterval := float64(offset.Nanoseconds() / 1e6)
+		s.processBlock(time.Now().Unix(), round, slot, blockInterval)
+		return
 	}
-	s.tryMineNextBlock()
 }
 
 func (s *SPService) handleNewBlock(chainTip ainterface.BlockNode) {
 	s.chainTip = chainTip
-	s.tryMineNextBlock()
-}
 
-func (s *SPService) tryMineNextBlock()  {
-	slot, round := s.context.Slot + 1, s.context.Round
-	if slot >= s.context.RoundSize {
-		return
-	}
+	slot := s.context.Slot + 1
 	now := time.Now()
 	_, slotStd, _, _ := s.getRoundInfo(now.Unix())
 	if slot - slotStd > 1 {
+		s.resetTimer(s.context.Slot)
 		return
 	}
-	chainTip := s.chainTip
-	if chainTip.Round() == uint32(s.context.Round) && chainTip.Slot() == uint16(s.context.Slot) {
-		isTurn := s.checkTurn(slot, round, false)
-		if !isTurn {
-			return
-		}
-		roundStartTime := s.context.RoundStartTime
-		roundInterval := s.GetRoundInterval()
-		if round > s.context.Round {
-			roundStartTime += roundInterval
-			roundInterval = s.config.RoundManager.GetRoundInterval(round)
-		}
-
-		nextBlockTime := roundInterval * (slot + 1) / s.context.RoundSize + roundStartTime
-		interval := (nextBlockTime - now.Unix()) * 1000 - int64(now.Nanosecond()) / int64(time.Millisecond)
-		blockTime := roundInterval * slot / s.context.RoundSize + roundStartTime
-		lastBlockTime := blockTime * 2 - nextBlockTime
-		// it's too early to generate next block.
-		if lastBlockTime > time.Now().Unix() {
-			return
-		}
-		s.processBlock(blockTime, round, slot, float64(interval))
-	}
+	s.blockTimer.Reset(time.Millisecond)
 }
 
 // process block by chain
@@ -352,10 +319,11 @@ func (s *SPService) getRoundInfo(targetTime int64) (int64, int64, int64, error) 
 }
 
 // reset blockTimer.
-func (s *SPService) resetTimer() {
-	d := (s.context.Slot + 1)*s.context.RoundInterval * int64(time.Second) / s.context.RoundSize
-	offset := time.Unix(s.context.RoundStartTime, 0).Add(time.Duration(d) + time.Second / 10).Sub(time.Now())
+func (s *SPService) resetTimer(slot int64) time.Duration{
+	d := slot*s.context.RoundInterval * int64(time.Second) / s.context.RoundSize
+	offset := time.Unix(s.context.RoundStartTime, 0).Add(time.Duration(d) + time.Millisecond).Sub(time.Now())
 	s.blockTimer.Reset(offset)
+	return offset
 }
 
 // handleBlockchainNotification handles notifications from blockchain.  It does
