@@ -26,12 +26,12 @@ type SPService struct {
 	context    params.Context
 	blockTimer *time.Timer
 
-	config     *params.Config
+	config *params.Config
 
 	chainTipChan chan ainterface.BlockNode
-	chainTip   ainterface.BlockNode
-	mineParam  *MineParam
-	topHeight  int32
+	chainTip     ainterface.BlockNode
+	mineParam    *MineParam
+	topHeight    int32
 }
 
 type MineParam struct {
@@ -53,7 +53,7 @@ func NewSatoshiPlusService(config *params.Config) (*SPService, error) {
 	service := &SPService{
 		config:       config,
 		chainTipChan: make(chan ainterface.BlockNode),
-		context:      params.Context{
+		context: params.Context{
 			Round:          0,
 			Slot:           roundSizei64 - 1,
 			RoundStartTime: chainStartTime - (roundSizei64-1)*common.DefaultBlockInterval,
@@ -97,7 +97,7 @@ func (s *SPService) Start() error {
 			select {
 			case <-s.blockTimer.C:
 				s.handleBlockTimeout()
-			case chainTip := <- s.chainTipChan:
+			case chainTip := <-s.chainTipChan:
 				s.handleNewBlock(chainTip)
 			case <-existCh:
 				break mainloop
@@ -169,7 +169,7 @@ func (s *SPService) initializeConsensus() error {
 	s.resetRoundInterval()
 	s.chainTip = s.config.Chain.GetTip()
 
-	s.resetTimer(s.context.Slot+1)
+	s.resetTimer(s.context.Slot + 1)
 
 	log.Infof("SPService initializeConsensus round: %v, slot: %v, roundStartTime: %v", s.context.Round, s.context.Slot, s.context.RoundStartTime)
 	return nil
@@ -215,25 +215,28 @@ func (s *SPService) resetRoundInterval() bool {
 
 // when the it turns to be a validator, try to generate a new block
 func (s *SPService) handleBlockTimeout() {
-	round,slot := s.context.Round, s.context.Slot + 1
+	round, slot := s.context.Round, s.context.Slot+1
 	if slot == s.context.RoundSize {
 		s.context.RoundStartTime = s.context.RoundStartTime + s.context.RoundInterval
 		slot = 0
 		round = round + 1
+	}
+
+	s.context.Slot = slot
+	if round > s.context.Round {
+		s.context.Round = round
 		if !s.resetRoundInterval() {
 			s.blockTimer.Reset(common.DefaultBlockInterval * time.Second)
 			return
 		}
 	}
 
-	s.context.Slot = slot
-	s.context.Round = round
 	isTurn := s.checkTurn(slot, round, false)
-	offset := s.resetTimer(s.context.Slot+1)
+	offset := s.resetTimer(s.context.Slot + 1)
 
 	if isTurn {
 		// milliseconds
-		blockInterval := float64(offset.Nanoseconds() / 1e6)
+		blockInterval := float64(offset / time.Millisecond)
 		s.processBlock(time.Now().Unix(), round, slot, blockInterval)
 		return
 	}
@@ -245,19 +248,21 @@ func (s *SPService) handleNewBlock(chainTip ainterface.BlockNode) {
 	slot := s.context.Slot + 1
 	now := time.Now()
 	_, slotStd, _, _ := s.getRoundInfo(now.Unix())
-	if slot - slotStd > 1 {
-		s.resetTimer(s.context.Slot)
-		return
+	if chainTip.Round() == uint32(s.context.Round) && chainTip.Slot() == uint16(s.context.Slot) {
+		if slot-slotStd > 1 {
+			s.resetTimer(s.context.Slot)
+			return
+		}
+		s.blockTimer.Reset(0)
 	}
-	s.blockTimer.Reset(time.Millisecond)
 }
 
 // process block by chain
-func (s *SPService) processBlock(blockTime int64, round, slot int64, interval float64)  {
+func (s *SPService) processBlock(blockTime int64, round, slot int64, interval float64) {
 	if s.mineParam != nil {
 		return
 	}
-	s.mineParam = &MineParam{Parent:s.chainTip.Hash(), Round:round, Slot:slot}
+	s.mineParam = &MineParam{Parent: s.chainTip.Hash(), Round: round, Slot: slot}
 	log.Infof("satoshiplus gen block start at round=%d, slot=%d", round, slot)
 	template, err := s.config.BlockTemplateGenerator.ProduceNewBlock(
 		s.config.Account, s.config.GasFloor, s.config.GasCeil,
@@ -298,7 +303,7 @@ func (s *SPService) getRoundInfo(targetTime int64) (int64, int64, int64, error) 
 	roundInterval := s.context.RoundInterval
 	round := s.context.Round
 	for {
-		if curTime + roundInterval >= targetTime {
+		if curTime+roundInterval >= targetTime {
 			break
 		}
 		curTime += roundInterval
@@ -311,7 +316,7 @@ func (s *SPService) getRoundInfo(targetTime int64) (int64, int64, int64, error) 
 		}
 	}
 
-	if curTime + roundInterval == targetTime {
+	if curTime+roundInterval == targetTime {
 		return round + 1, 0, targetTime, nil
 	}
 	slot := (targetTime - curTime) * s.context.RoundSize / roundInterval
@@ -319,8 +324,8 @@ func (s *SPService) getRoundInfo(targetTime int64) (int64, int64, int64, error) 
 }
 
 // reset blockTimer.
-func (s *SPService) resetTimer(slot int64) time.Duration{
-	d := slot*s.context.RoundInterval * int64(time.Second) / s.context.RoundSize
+func (s *SPService) resetTimer(slot int64) time.Duration {
+	d := slot * s.context.RoundInterval * int64(time.Second) / s.context.RoundSize
 	offset := time.Unix(s.context.RoundStartTime, 0).Add(time.Duration(d) + time.Millisecond).Sub(time.Now())
 	s.blockTimer.Reset(offset)
 	return offset
