@@ -58,6 +58,7 @@ func NewSatoshiPlusService(config *params.Config) (*SPService, error) {
 			Slot:           roundSizei64 - 1,
 			RoundStartTime: chainStartTime - (roundSizei64-1)*common.DefaultBlockInterval,
 			RoundInterval:  roundSizei64 * common.DefaultBlockInterval,
+			RoundSize:      roundSizei64,
 		},
 	}
 
@@ -137,7 +138,7 @@ func (s *SPService) getValidators(round uint32, verbose bool) ([]*common.Address
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get validators %v", err.Error())
 	}
-	if uint16(len(validators)) != chaincfg.ActiveNetParams.RoundSize {
+	if int64(len(validators)) != s.context.RoundSize {
 		return nil, nil, fmt.Errorf("getValidators error: can not get validators %d for round = %d",
 			len(validators), round)
 	}
@@ -207,7 +208,7 @@ func (s *SPService) resetRoundInterval() bool {
 		log.Errorf("[handleBlockTimeout] failed to adjust time")
 		return false
 	}
-	log.Infof("Reset round interval, round %d, block interval %f", s.context.Round, float64(roundInterval)/float64(chaincfg.ActiveNetParams.RoundSize))
+	log.Infof("Reset round interval, round %d, interval %f", s.context.Round, roundInterval)
 	s.context.RoundInterval = roundInterval
 	return true
 }
@@ -231,13 +232,17 @@ func (s *SPService) handleBlockTimeout() {
 	s.context.Round = round
 	isTurn := s.checkTurn(slot, round, false)
 	s.resetTimer()
-	if !isTurn {
-		s.tryMineNextBlock()
-		return
+
+	if isTurn {
+		chainTip := s.chainTip
+	    if chainTip.Round() < uint32(round) || chainTip.Round() == uint32(round) && chainTip.Slot() < uint16(slot) {
+			// milliseconds
+			blockInterval := float64(s.GetRoundInterval()) * 1000 / float64(s.context.RoundSize)
+			s.processBlock(time.Now().Unix(), round, slot, blockInterval)
+			return
+		}
 	}
-	// milliseconds
-	blockInterval := float64(s.GetRoundInterval()) * 1000 / float64(chaincfg.ActiveNetParams.RoundSize)
-	s.processBlock(time.Now().Unix(), round, slot, blockInterval)
+	s.tryMineNextBlock()
 }
 
 func (s *SPService) handleNewBlock(chainTip ainterface.BlockNode) {
@@ -247,7 +252,7 @@ func (s *SPService) handleNewBlock(chainTip ainterface.BlockNode) {
 
 func (s *SPService) tryMineNextBlock()  {
 	slot, round := s.context.Slot + 1, s.context.Round
-	if slot >= int64(chaincfg.ActiveNetParams.RoundSize) {
+	if slot >= s.context.RoundSize {
 		return
 	}
 	now := time.Now()
@@ -268,9 +273,9 @@ func (s *SPService) tryMineNextBlock()  {
 			roundInterval = s.config.RoundManager.GetRoundInterval(round)
 		}
 
-		nextBlockTime := roundInterval * (slot + 1) / int64(chaincfg.ActiveNetParams.RoundSize) + roundStartTime
+		nextBlockTime := roundInterval * (slot + 1) / s.context.RoundSize + roundStartTime
 		interval := (nextBlockTime - now.Unix()) * 1000 - int64(now.Nanosecond()) / int64(time.Millisecond)
-		blockTime := roundInterval * slot / int64(chaincfg.ActiveNetParams.RoundSize) + roundStartTime
+		blockTime := roundInterval * slot / s.context.RoundSize + roundStartTime
 		lastBlockTime := blockTime * 2 - nextBlockTime
 		// it's too early to generate next block.
 		if lastBlockTime > time.Now().Unix() {
@@ -322,8 +327,6 @@ func (s *SPService) getRoundInfo(targetTime int64) (int64, int64, int64, error) 
 		return 0, 0, 0, errors.New("targetTime must be greater than block time")
 	}
 
-	roundSizei64 := int64(chaincfg.ActiveNetParams.RoundSize)
-
 	curTime := s.context.RoundStartTime
 	roundInterval := s.context.RoundInterval
 	round := s.context.Round
@@ -344,14 +347,14 @@ func (s *SPService) getRoundInfo(targetTime int64) (int64, int64, int64, error) 
 	if curTime + roundInterval == targetTime {
 		return round + 1, 0, targetTime, nil
 	}
-	slot := (targetTime - curTime) * roundSizei64 / roundInterval
+	slot := (targetTime - curTime) * s.context.RoundSize / roundInterval
 	return round, slot, curTime, nil
 }
 
 // reset blockTimer.
 func (s *SPService) resetTimer() {
-	d := (s.context.Slot + 1)*s.context.RoundInterval * int64(time.Second) / int64(chaincfg.ActiveNetParams.RoundSize)
-	offset := time.Unix(s.context.RoundStartTime, 0).Add(time.Duration(d) + time.Millisecond).Sub(time.Now())
+	d := (s.context.Slot + 1)*s.context.RoundInterval * int64(time.Second) / s.context.RoundSize
+	offset := time.Unix(s.context.RoundStartTime, 0).Add(time.Duration(d) + time.Second / 10).Sub(time.Now())
 	s.blockTimer.Reset(offset)
 }
 

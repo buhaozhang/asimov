@@ -13,4 +13,6 @@ type Context struct {
     Slot           int64
     // RoundStartTime indicates the timestamp when a round start, unit in seconds
     RoundStartTime int64
+    // the round size
+    RoundSize      int64
 }
