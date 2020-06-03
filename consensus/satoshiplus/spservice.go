@@ -235,9 +235,7 @@ func (s *SPService) handleBlockTimeout() {
 
 func (s *SPService) handleNewBlock(chainTip ainterface.BlockNode) {
 	if chainTip.Round() == uint32(s.context.Round) && chainTip.Slot() == uint16(s.context.Slot) {
-		if s.blockTimer.Stop() {
-			s.resetTimer(s.context.Slot)
-		}
+		s.resetTimer(s.context.Slot)
 	}
 }
 
@@ -306,7 +304,9 @@ func (s *SPService) getRoundInfo(targetTime int64) (int64, int64, int64, error) 
 func (s *SPService) resetTimer(slot int64) time.Duration {
 	d := slot * s.context.RoundInterval * int64(time.Second) / s.context.RoundSize
 	offset := time.Unix(s.context.RoundStartTime, 0).Add(time.Duration(d) + time.Millisecond).Sub(time.Now())
-	s.blockTimer.Reset(offset)
+	if !s.blockTimer.Reset(offset) {
+		<-s.blockTimer.C
+	}
 	return offset
 }
 
