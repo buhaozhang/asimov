@@ -32,12 +32,6 @@ type SPService struct {
 	topHeight    int32
 }
 
-type MineParam struct {
-	Parent common.Hash
-	Slot   int64
-	Round  int64
-}
-
 // Create SatoshiPlus Service
 func NewSatoshiPlusService(config *params.Config) (*SPService, error) {
 	if config == nil {
