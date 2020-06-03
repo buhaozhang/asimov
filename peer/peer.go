@@ -1056,6 +1056,12 @@ func (p *Peer) PushRejectMsg(command string, code protos.RejectCode, reason stri
 // from the remote peer.  It will return an error if the remote peer's version
 // is not compatible with ours.
 func (p *Peer) handleRemoteVersionMsg(msg *protos.MsgVersion) error {
+	// Check for messages from the wrong asimov network.
+	if msg.Magic != chaincfg.ActiveNetParams.Net {
+		reason := fmt.Sprintf("message from other network [%v]", msg.Magic)
+		return errors.New(reason)
+	}
+
 	// Detect self connections.
 	if !allowSelfConns && sentNonces.Exists(msg.Nonce) {
 		return errors.New("disconnecting peer connected to self")

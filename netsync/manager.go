@@ -1447,12 +1447,6 @@ func (sm *SyncManager) handleBlockchainNotification(notification *blockchain.Not
 	// A block has been accepted into the block chain.  Relay it to other
 	// peers.
 	case blockchain.NTBlockAccepted:
-		// Don't relay if we are not current. Other peers that are
-		// current should already know about it.
-		if !sm.current() {
-			return
-		}
-
 		block, ok := notification.Data.(*asiutil.Block)
 		if !ok {
 			log.Warnf("Chain accepted notification is not a block.")

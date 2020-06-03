@@ -29,8 +29,6 @@ type SPService struct {
 	config *params.Config
 
 	chainTipChan chan ainterface.BlockNode
-	chainTip     ainterface.BlockNode
-	mineParam    *MineParam
 	topHeight    int32
 }
 
@@ -166,9 +164,8 @@ func (s *SPService) initializeConsensus() error {
 		s.context.Slot = slot
 		s.context.RoundStartTime = roundStartTime
 	}
-	s.resetRoundInterval()
-	s.chainTip = s.config.Chain.GetTip()
 
+	s.resetRoundInterval()
 	s.resetTimer(s.context.Slot + 1)
 
 	log.Infof("SPService initializeConsensus round: %v, slot: %v, roundStartTime: %v", s.context.Round, s.context.Slot, s.context.RoundStartTime)
@@ -243,7 +240,6 @@ func (s *SPService) handleBlockTimeout() {
 }
 
 func (s *SPService) handleNewBlock(chainTip ainterface.BlockNode) {
-	s.chainTip = chainTip
 	if chainTip.Round() == uint32(s.context.Round) && chainTip.Slot() == uint16(s.context.Slot) {
 		if s.blockTimer.Stop() {
 			s.resetTimer(s.context.Slot)
@@ -253,10 +249,6 @@ func (s *SPService) handleNewBlock(chainTip ainterface.BlockNode) {
 
 // process block by chain
 func (s *SPService) processBlock(blockTime int64, round, slot int64, interval float64) {
-	if s.mineParam != nil {
-		return
-	}
-	s.mineParam = &MineParam{Parent: s.chainTip.Hash(), Round: round, Slot: slot}
 	log.Infof("satoshiplus gen block start at round=%d, slot=%d", round, slot)
 	template, err := s.config.BlockTemplateGenerator.ProduceNewBlock(
 		s.config.Account, s.config.GasFloor, s.config.GasCeil,
@@ -279,7 +271,6 @@ func (s *SPService) processBlock(blockTime int64, round, slot int64, interval fl
 			template.Block.Height(), template.Block.Hash(),
 			len(template.Block.MsgBlock().PreBlockSigs), len(template.Block.Transactions()))
 	}
-	s.mineParam = nil
 }
 
 // return round interval currently
