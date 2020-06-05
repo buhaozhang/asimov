@@ -306,9 +306,7 @@ func (s *SPService) getRoundInfo(targetTime int64) (int64, int64, int64, error) 
 func (s *SPService) resetTimer(slot int64) time.Duration {
 	d := slot * s.context.RoundInterval * int64(time.Second) / s.context.RoundSize
 	offset := time.Unix(s.context.RoundStartTime, 0).Add(time.Duration(d) + time.Millisecond).Sub(time.Now())
-	if !s.blockTimer.Reset(offset) {
-		<-s.blockTimer.C
-	}
+	s.blockTimer.Reset(offset)
 	return offset
 }
 
