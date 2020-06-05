@@ -1805,7 +1805,7 @@ func (b *BlockChain) createContract(
 		errStr := fmt.Sprintf("create contract, incorrect data protocol")
 		return common.Address{}, leftOverGas, -1, ruleError(ErrBadContractData, errStr)
 	}
-	byteCode, ok, leftOverGas := b.GetByteCode(view.Txs(), block, leftOverGas,
+	byteCode, ok, leftOverGas := b.GetByteCode(view, block, leftOverGas,
 		stateDB, chaincfg.ActiveNetParams.FvmParam, category, templateName)
 	if !ok {
 		errStr := fmt.Sprintf("create contract, get byte code from template error")
@@ -2687,8 +2687,9 @@ func (b *BlockChain) PostChainEvents(events []interface{}, logs []*types.Log) {
 
 // FetchTemplate return decoded values for template data.
 // It fetches data from tx map first. If not exist, it will search from db.
-func (b *BlockChain) FetchTemplate(txs map[common.Hash]txo.TxMark, hash *common.Hash) (uint16, []byte, []byte, []byte, []byte, error) {
-	if txs != nil {
+func (b *BlockChain) FetchTemplate(view *txo.UtxoViewpoint, hash *common.Hash) (uint16, []byte, []byte, []byte, []byte, error) {
+	if view != nil {
+		txs := view.Txs()
 		if m, exist := txs[*hash]; exist {
 			if m.Action == txo.ViewRm {
 				return 0, nil, nil, nil, nil, ruleError(ErrInvalidTemplate, "template tx roll back")

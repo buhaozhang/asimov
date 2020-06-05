@@ -55,7 +55,7 @@ type (
 	// Get system contract information
 	GetSystemContractInfoFunc func(delegateAddr common.ContractCode) (common.Address, []byte, string)
 	// Fetch a given template from template warehouse
-	FetchTemplateFunc func(txs map[common.Hash]txo.TxMark, hash *common.Hash) (uint16, []byte, []byte, []byte, []byte, error)
+	FetchTemplateFunc func(view *txo.UtxoViewpoint, hash *common.Hash) (uint16, []byte, []byte, []byte, []byte, error)
 	// Get vote value
 	VoteValueFunc func() int64
 )

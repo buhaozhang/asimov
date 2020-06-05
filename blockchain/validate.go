@@ -1715,7 +1715,7 @@ func (b *BlockChain) GetAcceptFees(
 
 //TODO
 func (b *BlockChain) GetByteCode(
-	txs map[common.Hash]txo.TxMark,
+	view *txo.UtxoViewpoint,
 	block *asiutil.Block,
 	gas uint64,
 	stateDB vm.StateDB,
@@ -1735,7 +1735,7 @@ func (b *BlockChain) GetByteCode(
 
 	// Get byte code by key
 	keyHash := common.HexToHash(contractTemplate.Key)
-	_, _, byteCode, _, _, err := b.FetchTemplate(txs, &keyHash)
+	_, _, byteCode, _, _, err := b.FetchTemplate(view, &keyHash)
 	if err != nil {
 		return nil, false, leftOverGas
 	}

@@ -235,7 +235,9 @@ func (s *SPService) handleBlockTimeout() {
 
 func (s *SPService) handleNewBlock(chainTip ainterface.BlockNode) {
 	if chainTip.Round() == uint32(s.context.Round) && chainTip.Slot() == uint16(s.context.Slot) {
-		s.resetTimer(s.context.Slot)
+		if s.blockTimer.Stop() {
+			s.resetTimer(s.context.Slot)
+		}
 	}
 }
 

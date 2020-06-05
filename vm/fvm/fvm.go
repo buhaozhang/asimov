@@ -23,7 +23,7 @@ type ChainContext interface {
 	GetTemplateWarehouseInfo() (common.Address, string)
 	GetSystemContractInfo(delegateAddr common.ContractCode) (common.Address, []byte, string)
 	GetTemplateInfo(contractAddr []byte, gas uint64, block *asiutil.Block, stateDB fvm.StateDB, chainConfig *params.ChainConfig)(uint16, string, uint64)
-	FetchTemplate(txs map[common.Hash]txo.TxMark, hash *common.Hash) (uint16, []byte, []byte, []byte, []byte, error)
+	FetchTemplate(view *txo.UtxoViewpoint, hash *common.Hash) (uint16, []byte, []byte, []byte, []byte, error)
 	BlockHashByHeight(int32) (*common.Hash, error)
 }
 

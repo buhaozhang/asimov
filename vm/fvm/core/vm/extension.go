@@ -144,7 +144,7 @@ func FlowDeployContract(contract *Contract, fvm *FVM, category uint16, templateN
 
 	// Get byte code by key
 	keyHash := common.Hash(byteKey)
-	_, _, byteCode, _, _, err := fvm.Context.FetchTemplate(fvm.View.Txs(), &keyHash)
+	_, _, byteCode, _, _, err := fvm.Context.FetchTemplate(fvm.View, &keyHash)
 	if err != nil {
 		return common.Address{}, err
 	}
