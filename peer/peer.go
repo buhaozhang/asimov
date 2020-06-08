@@ -1205,35 +1205,6 @@ func (p *Peer) writeMessage(msg protos.Message, enc protos.MessageEncoding) erro
 	return err
 }
 
-// isAllowedReadError returns whether or not the passed error is allowed without
-// disconnecting the peer.  In particular, regression tests need to be allowed
-// to send malformed messages without the peer being disconnected.
-func (p *Peer) isAllowedReadError(err error) bool {
-	// Only allow read errors in regression test mode.
-	if p.cfg.ChainParams.Net != common.RegTestNet {
-		return false
-	}
-
-	// Don't allow the error if it's not specifically a malformed message error.
-	if _, ok := err.(*protos.MessageError); !ok {
-		return false
-	}
-
-	// Don't allow the error if it's not coming from localhost or the
-	// hostname can't be determined for some reason.
-	host, _, err := net.SplitHostPort(p.addr)
-	if err != nil {
-		return false
-	}
-
-	if host != "127.0.0.1" && host != "localhost" {
-		return false
-	}
-
-	// Allowed if all checks passed.
-	return true
-}
-
 // shouldHandleReadError returns whether or not the passed error, which is
 // expected to have come from reading from the remote peer in the inHandler,
 // should be logged and responded to with a reject message.
@@ -1461,15 +1432,6 @@ out:
 		rmsg, buf, err := p.readMessage(p.wireEncoding)
 		idleTimer.Stop()
 		if err != nil {
-			// In order to allow regression tests with malformed messages, don't
-			// disconnect the peer when we're in regression test mode and the
-			// error is one of the allowed errors.
-			if p.isAllowedReadError(err) {
-				log.Errorf("Allowed test error from %s: %v", p, err)
-				idleTimer.Reset(idleTimeout)
-				continue
-			}
-
 			// Only logger the error and send reject message if the
 			// local peer is not forcibly disconnecting and the
 			// remote peer has not disconnected.

@@ -40,9 +40,7 @@ func TestAsimovNetStringer(t *testing.T) {
 	}{
 		{MainNet, "mainnet"},
 		{DevelopNet, "devnet"},
-		{RegTestNet, "regnet"},
 		{TestNet, "testnet"},
-		{SimNet, "simnet"},
 		{0xffffffff, "Unknown AsimovNet (4294967295)"},
 	}
 

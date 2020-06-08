@@ -250,45 +250,11 @@ var DevelopNetParams = Params{
 
 	Bitcoin: []*BitcoinParams{
 		{
-			Host:        "116.62.61.38:18554",
+			Host:        "devnet-btc.asimov.tech:18554",
 			RpcUser:     "asimov",
 			RpcPassword: "asimov",
 		},
 	},
-}
-
-// RegressionNetParams defines the network parameters for the regression test
-// Asimov network.  Not to be confused with the test Asimov network.
-var RegressionNetParams = Params{
-	Net:         common.RegTestNet,
-	DefaultPort: "18711",
-	DNSSeeds:    []DNSSeed{},
-
-	// Chain parameters
-	//GenesisBlock:             &regTestGenesisBlock,
-	//GenesisHash:              &regTestGenesisHash,
-	CoinbaseMaturity:         100,
-	SubsidyReductionInterval: 150,
-	RoundSize:                30,
-
-	// Checkpoints ordered from oldest to newest.
-	Checkpoints: nil,
-
-	// Consensus rule change deployments.
-	//
-	// The miner confirmation window is defined as:
-	//   target proof of work timespan / target proof of work spacing
-	RuleChangeActivationThreshold: 108, // 75%  of MinerConfirmationWindow
-	MinerConfirmationWindow:       144,
-	Deployments: [DefinedDeployments]ConsensusDeployment{
-		DeploymentTestDummy: {
-			BitNumber:  28,
-			StartTime:  0,             // Always available for vote
-			ExpireTime: math.MaxInt64, // Never expires
-		},
-	},
-
-	FvmParam: params.TestnetChainConfig,
 }
 
 // TestNetParams defines the network parameters for the test flow network.
@@ -340,60 +306,7 @@ var TestNetParams = Params{
 
 	Bitcoin: []*BitcoinParams{
 		{
-			Host:        "116.62.61.38:18332",
-			RpcUser:     "asimov",
-			RpcPassword: "asimov",
-		},
-	},
-}
-
-// SimNetParams defines the network parameters for the simulation test Asimov
-// network.  This network is similar to the normal test network except it is
-// intended for private use within a group of individuals doing simulation
-// testing.  The functionality is intended to differ in that the only nodes
-// which are specifically specified are used to create the network rather than
-// following normal discovery rules.  This is important as otherwise it would
-// just turn into another public testnet.
-var SimNetParams = Params{
-	Net:         common.SimNet,
-	DefaultPort: "18731",
-	DNSSeeds:    []DNSSeed{}, // NOTE: There must NOT be any seeds.
-
-	GenesisCandidates: []common.Address{
-		common.HexToAddress("0x6632032786c61472128d1b3185c92626f8ff0ee4d3"),
-		common.HexToAddress("0x668bd8118cc510f8ccd1089bd9d5e44bdc20d6e373"),
-		common.HexToAddress("0x66e8e93bb62ade708ccb5715736a75df4a981b20c5"),
-	},
-	CoinbaseMaturity: 1,
-	//SubsidyReductionInterval: 210000,
-	SubsidyReductionInterval: 25000000,
-	RoundSize:                15,
-	BtcBlocksPerRound:        1,
-	CollectHeight:            10100,
-	CollectInterval:          144,
-
-	// Checkpoints ordered from oldest to newest.
-	Checkpoints: nil,
-
-	// Consensus rule change deployments.
-	//
-	// The miner confirmation window is defined as:
-	//   target proof of work timespan / target proof of work spacing
-	RuleChangeActivationThreshold: 75, // 75% of MinerConfirmationWindow
-	MinerConfirmationWindow:       100,
-	Deployments: [DefinedDeployments]ConsensusDeployment{
-		DeploymentTestDummy: {
-			BitNumber:  28,
-			StartTime:  0,             // Always available for vote
-			ExpireTime: math.MaxInt64, // Never expires
-		},
-	},
-
-	FvmParam: params.TestnetChainConfig,
-
-	Bitcoin: []*BitcoinParams{
-		{
-			Host:        "116.62.61.38:18554",
+			Host:        "testnet-btc.asimov.tech:18332",
 			RpcUser:     "asimov",
 			RpcPassword: "asimov",
 		},
@@ -451,6 +364,4 @@ func init() {
 	mustRegister(&MainNetParams)
 	mustRegister(&DevelopNetParams)
 	mustRegister(&TestNetParams)
-	mustRegister(&RegressionNetParams)
-	mustRegister(&SimNetParams)
 }

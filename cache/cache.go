@@ -18,8 +18,12 @@ func PutExecuteError(txid string,data string){
 }
 
 func GetExecuteError(txid string)(string,error){
-	value:=cache.Get(txid).Value()
-	t,ok:= value.(string)
+
+	value:=cache.Get(txid)
+	if value ==nil || value.Value()==nil{
+		return "",nil
+	}
+	t,ok:= value.Value().(string)
 	if !ok{
 		return "",cacheConvertError
 	}

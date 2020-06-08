@@ -24,14 +24,8 @@ const (
 	// DevelopNet represents the regression test network.
 	DevelopNet AsimovNet = 0x39b187f3
 
-	// RegTestNet represents the regression test network.
-	RegTestNet AsimovNet = 0xdab5bffa
-
 	// TestNet represents the test network.
 	TestNet AsimovNet = 0x0709110b
-
-	// SimNet represents the simulation test network.
-	SimNet AsimovNet = 0x12141c16
 )
 
 // bnStrings is a map of asimov networks back to their constant names for
@@ -39,9 +33,7 @@ const (
 var bnStrings = map[AsimovNet]string{
 	MainNet:    "mainnet",
 	DevelopNet: "devnet",
-	RegTestNet: "regnet",
 	TestNet:    "testnet",
-	SimNet:     "simnet",
 }
 
 // String returns the types.AsimovNet in human-readable form.

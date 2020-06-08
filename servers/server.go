@@ -340,7 +340,7 @@ func (sp *serverPeer) OnVersion(_ *peer.Peer, msg *protos.MsgVersion) *protos.Ms
 	isInbound := sp.Inbound()
 	remoteAddr := sp.NA()
 	addrManager := sp.server.addrManager
-	if !chaincfg.Cfg.SimNet && !isInbound {
+	if !isInbound {
 		addrManager.SetServices(remoteAddr, msg.Services)
 	}
 
@@ -1100,13 +1100,6 @@ func (sp *serverPeer) OnFilterLoad(_ *peer.Peer, msg *protos.MsgFilterLoad) {
 // and is used to provide the peer with known addresses from the address
 // manager.
 func (sp *serverPeer) OnGetAddr(_ *peer.Peer, msg *protos.MsgGetAddr) {
-	// Don't return any addresses when running on the simulation test
-	// network.  This helps prevent the network from becoming another
-	// public test network since it will not be able to learn about other
-	// peers that have not specifically been provided.
-	if chaincfg.Cfg.SimNet {
-		return
-	}
 
 	// Do not accept getaddr requests from outbound peers.  This reduces
 	// fingerprinting attacks.
@@ -1135,13 +1128,6 @@ func (sp *serverPeer) OnGetAddr(_ *peer.Peer, msg *protos.MsgGetAddr) {
 // OnAddr is invoked when a peer receives an addr bitcoin message and is
 // used to notify the NodeServer about advertised addresses.
 func (sp *serverPeer) OnAddr(_ *peer.Peer, msg *protos.MsgAddr) {
-	// Ignore addresses when running on the simulation test network.  This
-	// helps prevent the network from becoming another public test network
-	// since it will not be able to learn about other peers that have not
-	// specifically been provided.
-	if chaincfg.Cfg.SimNet {
-		return
-	}
 
 	// A message that has no addresses is invalid.
 	if len(msg.AddrList) == 0 {
@@ -1576,7 +1562,7 @@ func (s *NodeServer) handleAddPeerMsg(state *peerState, sp *serverPeer) bool {
 	// the simulation test network since it is only intended to connect to
 	// specified peers and actively avoids advertising and connecting to
 	// discovered peers.
-	if !chaincfg.Cfg.SimNet && !sp.Inbound() {
+	if !sp.Inbound() {
 		// Advertise the local address when the server accepts incoming
 		// connections and it believes itself to be close to the best
 		// known tip.
@@ -2620,7 +2606,7 @@ func NewServer(db database.Transactor, stateDB database.Database, agentBlacklist
 	// discovered peers in order to prevent it from becoming a public test
 	// network.
 	var newAddressFunc func() (net.Addr, error)
-	if !chaincfg.Cfg.SimNet && !chaincfg.Cfg.TestNet &&
+	if !chaincfg.Cfg.TestNet &&
 		!chaincfg.Cfg.DevelopNet && len(chaincfg.Cfg.ConnectPeers) == 0 {
 		newAddressFunc = func() (net.Addr, error) {
 			for tries := 0; tries < 100; tries++ {

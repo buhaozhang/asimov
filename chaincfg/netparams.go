@@ -31,23 +31,9 @@ var developNetParams = netParams{
 	Params:  &DevelopNetParams,
 }
 
-// regressionNetParams contains parameters specific to the regression test
-// network (protos.RegTestNet).  NOTE: The RPC port is intentionally different
-// than the reference implementation - see the mainNetParams comment for
-// details.
-var regressionNetParams = netParams{
-	Params:  &RegressionNetParams,
-}
-
 // testNetParams contains parameters specific to the test network
 // (protos.TestNet).  NOTE: The RPC port is intentionally different than the
 // reference implementation - see the mainNetParams comment for details.
 var testNetParams = netParams{
 	Params:  &TestNetParams,
-}
-
-// simNetParams contains parameters specific to the simulation test network
-// (protos.SimNet).
-var simNetParams = netParams{
-	Params:  &SimNetParams,
 }

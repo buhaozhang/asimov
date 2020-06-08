@@ -1717,8 +1717,9 @@ func (b *BlockChain) connectContract(
 
 	leftOverGas = gas
 	// in order to retention accuracy, mul 10000 for contract to check
-	gasPrice := fee*10000/int64(tx.MsgTx().TxContract.GasLimit)
-	context := fvm.NewFVMContext(caller, new(big.Int).SetInt64(gasPrice), block, b, view, voteValue)
+	gasPrice := new(big.Int).Mul(big.NewInt(fee), big.NewInt(10000))
+	gasPrice = new(big.Int).Div(gasPrice, big.NewInt(int64(tx.MsgTx().TxContract.GasLimit)))
+	context := fvm.NewFVMContext(caller, gasPrice, block, b, view, voteValue)
 	vmenv := vm.NewFVMWithVtx(context, stateDB, chaincfg.ActiveNetParams.FvmParam, *b.GetVmConfig(), vtx)
 	var ret []byte
 	switch contractCode {

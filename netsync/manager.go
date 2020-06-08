@@ -10,7 +10,6 @@ import (
 	"github.com/AsimovNetwork/asimov/mining"
 	"github.com/AsimovNetwork/asimov/vm/fvm/core/types"
 	"math/rand"
-	"net"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -348,8 +347,7 @@ func (sm *SyncManager) startSync() {
 		// not support the headers-first approach so do normal block
 		// downloads when in regression test mode.
 		if sm.nextCheckpoint != nil &&
-			best.Height < sm.nextCheckpoint.Height &&
-			sm.chainParams != &chaincfg.RegressionNetParams {
+			best.Height < sm.nextCheckpoint.Height {
 
 			bestPeer.PushGetHeadersMsg(locator, sm.nextCheckpoint.Hash)
 			sm.headersFirstMode = true
@@ -373,25 +371,10 @@ func (sm *SyncManager) startSync() {
 // isSyncCandidate returns whether or not the peer is a candidate to consider
 // syncing from.
 func (sm *SyncManager) isSyncCandidate(peer *peerpkg.Peer) bool {
-	// Typically a peer is not a candidate for sync if it's not a full node,
-	// however regression test is special in that the regression tool is
-	// not a full node and still needs to be considered a sync candidate.
-	if sm.chainParams == &chaincfg.RegressionNetParams {
-		// The peer is not a candidate if it's not coming from localhost
-		// or the hostname can't be determined for some reason.
-		host, _, err := net.SplitHostPort(peer.Addr())
-		if err != nil {
-			return false
-		}
-
-		if host != "127.0.0.1" && host != "localhost" {
-			return false
-		}
-	} else {
-		nodeServices := peer.Services()
-		if nodeServices&common.SFNodeNetwork != common.SFNodeNetwork {
-			return false
-		}
+	// Typically a peer is not a candidate for sync if it's not a full node.
+	nodeServices := peer.Services()
+	if nodeServices&common.SFNodeNetwork != common.SFNodeNetwork {
+		return false
 	}
 
 	// Candidate if all checks passed.
@@ -722,17 +705,10 @@ func (sm *SyncManager) handleBlockMsg(bmsg *blockMsg) {
 	// If we didn't ask for this block then the peer is misbehaving.
 	blockHash := bmsg.block.Hash()
 	if _, exists = state.requestedBlocks[*blockHash]; !exists {
-		// The regression test intentionally sends some blocks twice
-		// to test duplicate block insertion fails.  Don't disconnect
-		// the peer or ignore the block when we're in regression test
-		// mode in this case so the chain code is actually fed the
-		// duplicate blocks.
-		if sm.chainParams != &chaincfg.RegressionNetParams {
-			log.Warnf("Got unrequested block %v from %s -- "+
-				"disconnecting", blockHash, peer.Addr())
-			peer.Disconnect()
-			return
-		}
+		log.Warnf("Got unrequested block %v from %s -- "+
+			"disconnecting", blockHash, peer.Addr())
+		peer.Disconnect()
+		return
 	}
 
 	// When in headers-first mode, if the block matches the hash of the

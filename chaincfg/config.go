@@ -142,9 +142,7 @@ type FConfig struct {
 	NoOnion              bool          `long:"noonion" description:"Disable connecting to tor hidden services"`
 	TorIsolation         bool          `long:"torisolation" description:"Enable Tor stream isolation by randomizing user credentials for each connection."`
 	TestNet              bool          `long:"testnet" description:"Use the test network"`
-	RegressionTest       bool          `long:"regtest" description:"Use the regression test network"`
 	RejectReplacement    bool          `long:"rejectreplacement" description:"Reject transactions that attempt to replace existing transactions within the mempool through the Replace-By-Price (RBP) signaling policy."`
-	SimNet               bool          `long:"simnet" description:"Use the simulation network"`
 	DevelopNet           bool          `long:"devnet" description:"Use the develop network"`
 	ChainId              uint64        `long:"chainid" description:"Use distinguish different chain, the main chain occupy zero, each subchain take a positive integer"`
 	AddCheckpointsArr    []string      `long:"addcheckpoint" description:"Add a custom checkpoint.  Format: '<height>:<hash>'"`
@@ -421,30 +419,21 @@ func LoadConfig() (*FConfig, []string, error) {
 	// Load additional FConfig from file.
 	var configFileError error
 	parser := newConfigParser(&cfg, &serviceOpts, flags.Default)
-	if !(preCfg.RegressionTest || preCfg.SimNet) || preCfg.ConfigFile !=
-		DefaultConfigFile {
-
-		if _, err := os.Stat(preCfg.ConfigFile); err != nil {
-			fmt.Fprintf(os.Stderr, "Check the config file %s: %v\n",
-				preCfg.ConfigFile, err)
-			return nil, nil, err
-		}
-
-		err := flags.NewIniParser(parser).ParseFile(preCfg.ConfigFile)
-		if err != nil {
-			if _, ok := err.(*os.PathError); !ok {
-				fmt.Fprintf(os.Stderr, "Error parsing FConfig "+
-					"file: %v\n", err)
-				fmt.Fprintln(os.Stderr, usageMessage)
-				return nil, nil, err
-			}
-			configFileError = err
-		}
+	if _, err := os.Stat(preCfg.ConfigFile); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Check the config file %s: %v\n",
+			preCfg.ConfigFile, err)
+		return nil, nil, err
 	}
 
-	// Don't add peers from the FConfig file when in regression test mode.
-	if preCfg.RegressionTest && len(cfg.AddPeers) > 0 {
-		cfg.AddPeers = nil
+	err = flags.NewIniParser(parser).ParseFile(preCfg.ConfigFile)
+	if err != nil {
+		if _, ok := err.(*os.PathError); !ok {
+			_, _ = fmt.Fprintf(os.Stderr, "Error parsing FConfig "+
+				"file: %v\n", err)
+			_, _ = fmt.Fprintln(os.Stderr, usageMessage)
+			return nil, nil, err
+		}
+		configFileError = err
 	}
 
 	// Parse command line options again to ensure they take precedence.
@@ -485,18 +474,6 @@ func LoadConfig() (*FConfig, []string, error) {
 		numNets++
 		ActiveNetParams = &testNetParams
 		genesisBlock = "testnet.block"
-	}
-	if cfg.RegressionTest {
-		numNets++
-		ActiveNetParams = &regressionNetParams
-		genesisBlock = "regtest.block"
-	}
-	if cfg.SimNet {
-		numNets++
-		// Also disable dns seeding on the simulation test network.
-		ActiveNetParams = &simNetParams
-		cfg.DisableDNSSeed = true
-		genesisBlock = "simnet.block"
 	}
 	if cfg.DevelopNet {
 		numNets++

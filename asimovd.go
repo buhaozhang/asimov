@@ -172,29 +172,6 @@ func flowdMain(serverChan chan<- *servers.NodeServer) error {
 	return nil
 }
 
-// removeRegressionDB removes the existing regression test database if running
-// in regression test mode and it already exists.
-func removeRegressionDB(dbPath string) error {
-	// Remove the old regression test database if it already exists.
-	fi, err := os.Stat(dbPath)
-	if err == nil {
-		mainLog.Infof("Removing regression test database from '%s'", dbPath)
-		if fi.IsDir() {
-			err := os.RemoveAll(dbPath)
-			if err != nil {
-				return err
-			}
-		} else {
-			err := os.Remove(dbPath)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
 // dbPath returns the path to the block database given a database type.
 func blockDbPath(dataDir, dbType string) string {
 	// The database name is based on the database type.
@@ -214,13 +191,6 @@ func blockDbPath(dataDir, dbType string) string {
 func loadBlockDB(cfg *chaincfg.FConfig) (database.Transactor, error) {
 	// The database name is based on the database type.
 	dbPath := blockDbPath(cfg.DataDir, database.FFLDB)
-
-	// The regression test is special in that it needs a clean database for
-	// each run, so remove it now if it already exists.
-	// Don't do anything if not in regression test mode.
-	if cfg.RegressionTest {
-		removeRegressionDB(dbPath)
-	}
 
 	mainLog.Infof("Loading block database from '%s'", dbPath)
 	db, err := dbdriver.Open(database.FFLDB, dbPath, chaincfg.ActiveNetParams.Net)

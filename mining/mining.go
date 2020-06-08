@@ -616,7 +616,7 @@ mempoolLoop:
 
 	// Choose which transactions make it into the block.
 	processTxStartTime := getMilliSecond()
-	log.Debugf("Start priorityQueue", priorityQueue.Len())
+	log.Debug("Start priorityQueue", priorityQueue.Len())
 priorityQueueLoop:
 	for priorityQueue.Len() > 0 {
 		interval := float64(getMilliSecond() - produceBlockStartTime)
