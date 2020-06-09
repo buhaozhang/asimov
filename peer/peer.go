@@ -40,7 +40,7 @@ const (
 
 	// invTrickleSize is the maximum amount of inventory to send in a single
 	// message when trickling inventory to remote peers.
-	maxInvTrickleSize = 100
+	maxInvTrickleSize = 1000
 
 	// maxKnownInventory is the maximum number of items to keep in the known
 	// inventory cache.
@@ -69,7 +69,7 @@ const (
 
 	// trickleTimeout is the duration of the ticker which trickles down the
 	// inventory to a peer.
-	trickleTimeout = 100 * time.Millisecond
+	trickleTimeout = 10 * time.Second
 
 	// writeDeadLine is the deadline for writing the message.
 	writeDeadLine = 5 * time.Second
@@ -1692,15 +1692,13 @@ out:
 				// If this is a new block, then we'll blast it
 				// out immediately, sipping the inv trickle
 				// queue.
-				switch iv.Type {
-				case protos.InvTypeBlock:
-					fallthrough
-				case protos.InvTypeSignature:
+				if iv.Type == protos.InvTypeBlock {
+
 					invMsg := protos.NewMsgInvSizeHint(1)
 					invMsg.AddInvVect(iv)
 					waiting = queuePacket(outMsg{msg: invMsg},
 						pendingMsgs, waiting)
-				default:
+				} else {
 					invSendQueue.PushBack(iv)
 				}
 			}
@@ -1716,7 +1714,7 @@ out:
 
 			// Create and send as many inv messages as needed to
 			// drain the inventory send queue.
-			invMsg := protos.NewMsgInvSizeHint(maxInvTrickleSize)
+			invMsg := protos.NewMsgInvSizeHint(uint(invSendQueue.Len()))
 			for e := invSendQueue.Front(); e != nil; e = invSendQueue.Front() {
 				iv := invSendQueue.Remove(e).(*protos.InvVect)
 
@@ -1728,7 +1726,10 @@ out:
 
 				invMsg.AddInvVect(iv)
 				if len(invMsg.InvList) >= maxInvTrickleSize {
-					break
+					waiting = queuePacket(
+						outMsg{msg: invMsg},
+						pendingMsgs, waiting)
+					invMsg = protos.NewMsgInvSizeHint(uint(invSendQueue.Len()))
 				}
 
 				// Add the inventory that is being relayed to
