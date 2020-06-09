@@ -57,6 +57,8 @@ const (
 	maxRequestedSigns = protos.MaxInvPerMsg
 
 	maxOrphanBlock = 20
+
+	maxAcceptTxGoroutine = 8
 )
 
 // zeroHash is the zero value hash (all zeros).  It is defined as a convenience.
@@ -151,6 +153,13 @@ type pauseMsg struct {
 	unpause <-chan struct{}
 }
 
+type acceptedTxMsg struct {
+	peer        *peerpkg.Peer
+	acceptedTxs []*mining.TxDesc
+	err         error
+	txHash      *common.Hash
+}
+
 // headerNode is used as a node in a list of headers that are linked together
 // between checkpoints.
 type headerNode struct {
@@ -209,6 +218,9 @@ type SyncManager struct {
 	BroadcastMessage func(msg protos.Message, exclPeers ...interface{})
 
 	isCurrent int32
+
+	acceptTxGoroutine int32
+	TxPendingQueue    *list.List
 }
 
 // resetHeaderState sets the headers-first mode state to values appropriate for
@@ -533,11 +545,6 @@ func (sm *SyncManager) updateSyncPeer(dcSyncPeer bool) {
 // handleTxMsg handles transaction messages from all peers.
 func (sm *SyncManager) handleTxMsg(tmsg *txMsg) {
 	peer := tmsg.peer
-	state, exists := sm.peerStates[peer]
-	if !exists {
-		log.Warnf("Received tx message from unknown peer %s", peer)
-		return
-	}
 
 	// NOTE:  BitcoinJ, and possibly other wallets, don't follow the spec of
 	// sending an inventory message and allowing the remote peer to decide
@@ -552,16 +559,63 @@ func (sm *SyncManager) handleTxMsg(tmsg *txMsg) {
 	// Ignore transactions that we have already rejected.  Do not
 	// send a reject message here because if the transaction was already
 	// rejected, the transaction was unsolicited.
-	if _, exists = sm.rejectedTxns[*txHash]; exists {
+	if _, exists := sm.rejectedTxns[*txHash]; exists {
 		log.Debugf("Ignoring unsolicited previously rejected "+
 			"transaction %v from %s", txHash, peer)
 		return
 	}
 
-	// Process the transaction to include validation, insertion in the
-	// memory pool, orphan handling, etc.
-	acceptedTxs, err := sm.txMemPool.ProcessTransaction(tmsg.tx,
-		true, true, mempool.Tag(peer.ID()))
+	if sm.TxPendingQueue.Len() == 0 {
+		go func() {
+			// Process the transaction to include validation, insertion in the
+			// memory pool, orphan handling, etc.
+			acceptedTxs, err := sm.txMemPool.ProcessTransaction(tmsg.tx,
+				true, true, mempool.Tag(peer.ID()))
+
+			sm.msgChan <- &acceptedTxMsg{
+				peer:        peer,
+				acceptedTxs: acceptedTxs,
+				err:         err,
+				txHash:      txHash,
+			}
+		}()
+		sm.acceptTxGoroutine++
+	} else {
+		sm.TxPendingQueue.PushBack(tmsg)
+	}
+}
+
+func (sm *SyncManager) handleAcceptedTxMsg(amsg *acceptedTxMsg) {
+	peer := amsg.peer
+	state, exists := sm.peerStates[peer]
+	if !exists {
+		log.Warnf("Received tx message from unknown peer %s", peer)
+		return
+	}
+
+	txHash := amsg.txHash
+	err := amsg.err
+
+	if sm.TxPendingQueue.Len() == 0 {
+		sm.acceptTxGoroutine--
+	} else {
+		e := sm.TxPendingQueue.Front()
+		tmsg := sm.TxPendingQueue.Remove(e).(*txMsg)
+
+		go func() {
+			// Process the transaction to include validation, insertion in the
+			// memory pool, orphan handling, etc.
+			acceptedTxs, err := sm.txMemPool.ProcessTransaction(tmsg.tx,
+				true, true, mempool.Tag(peer.ID()))
+
+			sm.msgChan <- &acceptedTxMsg{
+				peer:        peer,
+				acceptedTxs: acceptedTxs,
+				err:         err,
+				txHash:      txHash,
+			}
+		}()
+	}
 
 	// Remove transaction from request maps. Either the mempool/chain
 	// already knows about it and as such we shouldn't have any more
@@ -595,7 +649,7 @@ func (sm *SyncManager) handleTxMsg(tmsg *txMsg) {
 		return
 	}
 
-	sm.peerNotifier.AnnounceNewTransactions(acceptedTxs)
+	sm.peerNotifier.AnnounceNewTransactions(amsg.acceptedTxs)
 }
 
 func (sm *SyncManager) handleSigMsg(tmsg *sigMsg) {
@@ -1400,6 +1454,9 @@ out:
 				// Wait until the sender unpauses the manager.
 				<-msg.unpause
 
+			case *acceptedTxMsg:
+				sm.handleAcceptedTxMsg(msg)
+
 			default:
 				log.Warnf("Invalid message type in block "+
 					"handler: %T", msg)
@@ -1703,6 +1760,7 @@ func New(config *Config) (*SyncManager, error) {
 		signedHeight:     make(map[int32]interface{}),
 		account:          config.Account,
 		BroadcastMessage: config.BroadcastMessage,
+		TxPendingQueue:   list.New(),
 	}
 
 	best := sm.chain.BestSnapshot()
