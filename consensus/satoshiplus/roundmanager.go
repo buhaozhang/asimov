@@ -132,17 +132,13 @@ func (m *RoundManager) GetValidators(blockHash common.Hash, round uint32, fn ain
 	}
 
 	if len(candidates) <= 2 {
-		candidatesLength := len(chaincfg.ActiveNetParams.GenesisCandidates) + len(candidates)
+		candidatesLength := len(chaincfg.ActiveNetParams.GenesisCandidates)
 		if math.Abs(totalWeight) < 1e-8 {
 			totalWeight = float64(candidatesLength)
 		}
+		totalWeight *= 2
 		for _, candidate := range chaincfg.ActiveNetParams.GenesisCandidates {
-			w, ok := candidates[candidate]
-			if ok {
-				candidates[candidate] = w + totalWeight/float64(candidatesLength)
-			} else {
-				candidates[candidate] = totalWeight/float64(candidatesLength)
-			}
+			candidates[candidate] = totalWeight/float64(candidatesLength)
 		}
 	}
 
