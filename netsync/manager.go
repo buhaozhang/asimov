@@ -565,7 +565,7 @@ func (sm *SyncManager) handleTxMsg(tmsg *txMsg) {
 		return
 	}
 
-	if sm.TxPendingQueue.Len() == 0 {
+	if sm.acceptTxGoroutine < maxAcceptTxGoroutine {
 		go func() {
 			// Process the transaction to include validation, insertion in the
 			// memory pool, orphan handling, etc.
