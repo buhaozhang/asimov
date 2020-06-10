@@ -58,7 +58,7 @@ const (
 
 	maxOrphanBlock = 20
 
-	maxAcceptTxGoroutine = 8
+	maxAcceptTxGoroutine = 4
 )
 
 // zeroHash is the zero value hash (all zeros).  It is defined as a convenience.
@@ -154,10 +154,10 @@ type pauseMsg struct {
 }
 
 type acceptedTxMsg struct {
-	peer        *peerpkg.Peer
 	acceptedTxs []*mining.TxDesc
 	err         error
-	txHash      *common.Hash
+	tmsg        *txMsg
+	finish      bool
 }
 
 // headerNode is used as a node in a list of headers that are linked together
@@ -542,6 +542,21 @@ func (sm *SyncManager) updateSyncPeer(dcSyncPeer bool) {
 	sm.startSync()
 }
 
+//acceptTx accept transaction and push result to msgChan.
+func (sm *SyncManager) acceptTx(tmsg *txMsg,finish bool) {
+	// Process the transaction to include validation, insertion in the
+	// memory pool, orphan handling, etc.
+	acceptedTxs, err := sm.txMemPool.ProcessTransaction(tmsg.tx,
+		true, true, mempool.Tag(tmsg.peer.ID()))
+
+	sm.msgChan <- &acceptedTxMsg{
+		acceptedTxs: acceptedTxs,
+		err:         err,
+		tmsg:        tmsg,
+		finish:      finish,
+	}
+}
+
 // handleTxMsg handles transaction messages from all peers.
 func (sm *SyncManager) handleTxMsg(tmsg *txMsg) {
 	peer := tmsg.peer
@@ -566,56 +581,45 @@ func (sm *SyncManager) handleTxMsg(tmsg *txMsg) {
 	}
 
 	if sm.acceptTxGoroutine < maxAcceptTxGoroutine {
-		go func() {
-			// Process the transaction to include validation, insertion in the
-			// memory pool, orphan handling, etc.
-			acceptedTxs, err := sm.txMemPool.ProcessTransaction(tmsg.tx,
-				true, true, mempool.Tag(peer.ID()))
-
-			sm.msgChan <- &acceptedTxMsg{
-				peer:        peer,
-				acceptedTxs: acceptedTxs,
-				err:         err,
-				txHash:      txHash,
-			}
-		}()
+		go sm.acceptTx(tmsg,true)
 		sm.acceptTxGoroutine++
 	} else {
 		sm.TxPendingQueue.PushBack(tmsg)
 	}
 }
 
+//handleAcceptedTxMsg handles accepted transaction messages.
 func (sm *SyncManager) handleAcceptedTxMsg(amsg *acceptedTxMsg) {
-	peer := amsg.peer
+	if amsg.finish {
+		if sm.TxPendingQueue.Len() == 0 {
+			sm.acceptTxGoroutine--
+		} else {
+			dealCount := sm.TxPendingQueue.Len()/maxAcceptTxGoroutine + 1
+			tmsgArr := make([]*txMsg, dealCount, dealCount)
+			for i := 0; i < dealCount; i++ {
+				e := sm.TxPendingQueue.Front()
+				newMsg := sm.TxPendingQueue.Remove(e).(*txMsg)
+				tmsgArr[i] = newMsg
+			}
+			go func() {
+				lasttmsg := tmsgArr[len(tmsgArr)-1]
+				for _, tmsg := range tmsgArr {
+					sm.acceptTx(tmsg, tmsg == lasttmsg)
+				}
+			}()
+		}
+	}
+
+	tmsg := amsg.tmsg
+	peer := tmsg.peer
 	state, exists := sm.peerStates[peer]
 	if !exists {
 		log.Warnf("Received tx message from unknown peer %s", peer)
 		return
 	}
 
-	txHash := amsg.txHash
+	txHash := tmsg.tx.Hash()
 	err := amsg.err
-
-	if sm.TxPendingQueue.Len() == 0 {
-		sm.acceptTxGoroutine--
-	} else {
-		e := sm.TxPendingQueue.Front()
-		tmsg := sm.TxPendingQueue.Remove(e).(*txMsg)
-
-		go func() {
-			// Process the transaction to include validation, insertion in the
-			// memory pool, orphan handling, etc.
-			acceptedTxs, err := sm.txMemPool.ProcessTransaction(tmsg.tx,
-				true, true, mempool.Tag(peer.ID()))
-
-			sm.msgChan <- &acceptedTxMsg{
-				peer:        peer,
-				acceptedTxs: acceptedTxs,
-				err:         err,
-				txHash:      txHash,
-			}
-		}()
-	}
 
 	// Remove transaction from request maps. Either the mempool/chain
 	// already knows about it and as such we shouldn't have any more
