@@ -57,8 +57,6 @@ const (
 	maxRequestedSigns = protos.MaxInvPerMsg
 
 	maxOrphanBlock = 20
-
-	maxAcceptTxGoroutine = 4
 )
 
 // zeroHash is the zero value hash (all zeros).  It is defined as a convenience.
@@ -157,7 +155,6 @@ type acceptedTxMsg struct {
 	acceptedTxs []*mining.TxDesc
 	err         error
 	tmsg        *txMsg
-	finish      bool
 }
 
 // headerNode is used as a node in a list of headers that are linked together
@@ -219,8 +216,8 @@ type SyncManager struct {
 
 	isCurrent int32
 
-	acceptTxGoroutine int32
-	TxPendingQueue    *list.List
+	TxPendingQueue *list.List
+	accepting      bool
 }
 
 // resetHeaderState sets the headers-first mode state to values appropriate for
@@ -543,17 +540,26 @@ func (sm *SyncManager) updateSyncPeer(dcSyncPeer bool) {
 }
 
 //acceptTx accept transaction and push result to msgChan.
-func (sm *SyncManager) acceptTx(tmsg *txMsg,finish bool) {
-	// Process the transaction to include validation, insertion in the
-	// memory pool, orphan handling, etc.
-	acceptedTxs, err := sm.txMemPool.ProcessTransaction(tmsg.tx,
-		true, true, mempool.Tag(tmsg.peer.ID()))
+func (sm *SyncManager) acceptTx() {
+	if !sm.accepting && sm.TxPendingQueue.Len() > 0 {
+		tempQueue := list.New()
+		tempQueue, sm.TxPendingQueue = sm.TxPendingQueue, tempQueue
+		go func() {
+			for e := tempQueue.Front(); e != nil; e = tempQueue.Front() {
+				tmsg := tempQueue.Remove(e).(*txMsg)
+				// Process the transaction to include validation, insertion in the
+				// memory pool, orphan handling, etc.
+				acceptedTxs, err := sm.txMemPool.ProcessTransaction(tmsg.tx,
+					true, true, mempool.Tag(tmsg.peer.ID()))
 
-	sm.msgChan <- &acceptedTxMsg{
-		acceptedTxs: acceptedTxs,
-		err:         err,
-		tmsg:        tmsg,
-		finish:      finish,
+				sm.msgChan <- &acceptedTxMsg{
+					acceptedTxs: acceptedTxs,
+					err:         err,
+					tmsg:        tmsg,
+				}
+			}
+		}()
+		sm.accepting = true
 	}
 }
 
@@ -580,35 +586,14 @@ func (sm *SyncManager) handleTxMsg(tmsg *txMsg) {
 		return
 	}
 
-	if sm.acceptTxGoroutine < maxAcceptTxGoroutine {
-		go sm.acceptTx(tmsg,true)
-		sm.acceptTxGoroutine++
-	} else {
-		sm.TxPendingQueue.PushBack(tmsg)
-	}
+	sm.TxPendingQueue.PushBack(tmsg)
+	sm.acceptTx()
 }
 
 //handleAcceptedTxMsg handles accepted transaction messages.
 func (sm *SyncManager) handleAcceptedTxMsg(amsg *acceptedTxMsg) {
-	if amsg.finish {
-		if sm.TxPendingQueue.Len() == 0 {
-			sm.acceptTxGoroutine--
-		} else {
-			dealCount := sm.TxPendingQueue.Len()/maxAcceptTxGoroutine + 1
-			tmsgArr := make([]*txMsg, dealCount, dealCount)
-			for i := 0; i < dealCount; i++ {
-				e := sm.TxPendingQueue.Front()
-				newMsg := sm.TxPendingQueue.Remove(e).(*txMsg)
-				tmsgArr[i] = newMsg
-			}
-			go func() {
-				lasttmsg := tmsgArr[len(tmsgArr)-1]
-				for _, tmsg := range tmsgArr {
-					sm.acceptTx(tmsg, tmsg == lasttmsg)
-				}
-			}()
-		}
-	}
+	sm.accepting = false
+	sm.acceptTx()
 
 	tmsg := amsg.tmsg
 	peer := tmsg.peer
