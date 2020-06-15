@@ -184,6 +184,7 @@ func (s *PublicRpcAPI) GetBlock(blockHash string, verbose bool, verboseTx bool) 
 		Slot:          blockHeader.SlotIndex,
 		GasLimit:      blockHeader.GasLimit,
 		GasUsed:       blockHeader.GasUsed,
+		Weight:        blockHeader.Weight,
 		Confirmations: int64(1 + best.Height - blockHeight),
 		Height:        int64(blockHeight),
 		Size:          int32(len(blkBytes)),

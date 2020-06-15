@@ -163,6 +163,7 @@ type GetBlockVerboseResult struct {
 	Reward        int64            `json:"reward,omitempty"`
 	FeeList       []FeeResult      `json:"FeeList,omitempty"`
 	PreSigList    []MsgSignResult  `json:"presiglist,omitempty"`
+	Weight        uint16           `json:"weight"`
 }
 
 // DecodeScriptResult models the data returned from the decodescript command.
