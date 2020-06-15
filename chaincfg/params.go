@@ -264,8 +264,8 @@ var TestNetParams = Params{
 	Net:         common.TestNet,
 	DefaultPort: "18721",
 	DNSSeeds: []DNSSeed{
-		{"seed1.asimov.network", true},
-		{"seed2.asimov.network", false},
+		{"seed1.asimov.pro", true},
+		{"seed2.asimov.pro", false},
 	},
 
 	// Chain parameters
