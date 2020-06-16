@@ -459,6 +459,7 @@ func (s *PublicRpcAPI) GetBlockListByHeight(offset int32, count int32) (interfac
 			TxCount:       uint64(len(block.MsgBlock().Transactions)),
 			Round:         header.Round,
 			Slot:          header.SlotIndex,
+			Weight:        header.Weight,
 			RawTx:         rawTxns,
 			Vtxs:          vtxRawTxns,
 			Receipts:      receiptResult,
