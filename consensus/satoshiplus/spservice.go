@@ -54,7 +54,7 @@ func NewSatoshiPlusService(config *params.Config) (*SPService, error) {
 		},
 	}
 
-	if !chaincfg.Cfg.DisableBlockEarly{
+	if !chaincfg.Cfg.DisableBlockEarly {
 		config.Chain.Subscribe(service.handleBlockchainNotification)
 	}
 	return service, nil
