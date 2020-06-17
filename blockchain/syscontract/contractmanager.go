@@ -22,7 +22,7 @@ import (
 type Manager struct {
 	chain fvm.ChainContext
 	// genesis transaction data cache
-	genesisDataCache map[common.ContractCode][]chaincfg.ContractInfo
+	genesisDataCache map[common.Address][]chaincfg.ContractInfo
 
 	// unrestricted assets cache
 	assetsUnrestrictedMtx   sync.Mutex
@@ -32,13 +32,16 @@ type Manager struct {
 
 // Init manager by genesis data.
 func (m *Manager) Init(chain fvm.ChainContext, dataBytes [] byte) error {
-	var cMap map[common.ContractCode][]chaincfg.ContractInfo
+	var cMap map[string][]chaincfg.ContractInfo
 	err := json.Unmarshal(dataBytes, &cMap)
 	if err != nil {
 		return err
 	}
 	m.chain = chain
-	m.genesisDataCache = cMap
+	m.genesisDataCache = make(map[common.Address][]chaincfg.ContractInfo)
+	for k, v := range cMap {
+		m.genesisDataCache[common.HexToAddress(k)] = v
+	}
 	m.assetsUnrestrictedCache = make(map[protos.Asset]struct{})
 	m.checkLimit = m.isLimit
 	return nil
@@ -54,7 +57,7 @@ func (m *Manager) IsLimitInCache(asset *protos.Asset) bool {
 }
 
 // Get latest contract by height.
-func (m *Manager) GetActiveContractByHeight(height int32, delegateAddr common.ContractCode) *chaincfg.ContractInfo {
+func (m *Manager) GetActiveContractByHeight(height int32, delegateAddr common.Address) *chaincfg.ContractInfo {
 	contracts, ok := m.genesisDataCache[delegateAddr]
 	if !ok {
 		return nil

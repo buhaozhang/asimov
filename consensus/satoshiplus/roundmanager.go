@@ -338,7 +338,7 @@ func (m *RoundManager) Halt() {
 }
 
 // return unique contract code which represents some consensus
-func (m *RoundManager) GetContract() common.ContractCode {
+func (m *RoundManager) GetContract() common.Address {
 	return common.ConsensusSatoshiPlus
 }
 

@@ -58,23 +58,18 @@ var PrecompiledContractsHomestead = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{6}):  &bn256Add{},
 	common.BytesToAddress([]byte{7}):  &bn256ScalarMul{},
 	common.BytesToAddress([]byte{8}):  &bn256Pairing{},
-
-	// 100~999：system contract
-	ConvertSystemContractAddress(common.GenesisOrganization):  &genesisOrganization{},
-	ConvertSystemContractAddress(common.RegistryCenter):       &registry{},
-	ConvertSystemContractAddress(common.TemplateWarehouse):    &templateWarehouse{},
-	ConvertSystemContractAddress(common.ConsensusSatoshiPlus): &ConsensusSatoshiPlus{},
-	ConvertSystemContractAddress(common.ConsensusPOA):         &ConsensusPOA{},
-	ConvertSystemContractAddress(common.ValidatorCommittee):   &ValidatorCommittee{},
 }
 
-// initialize system contract address according to `chaincfg.genesis_contracts.go`
-func ConvertSystemContractAddress(systemContractAddr common.ContractCode) common.Address {
-	return common.HexToAddress(string(systemContractAddr)[2:])
-}
-
-func RevertSystemContractCode(address common.Address) common.ContractCode {
-	return common.ContractCode(address.Big().Int64())
+func GetPreCompiledContract(addr common.Address) PrecompiledContract {
+	if c, ok := PrecompiledContractsHomestead[addr]; ok && c != nil {
+		return c
+	}
+	if c, ok := common.ContractCodeStrings[addr]; ok && c != "" {
+		contract := &SystemContract{addr : addr}
+		PrecompiledContractsHomestead[addr] = contract
+		return contract
+	}
+	return nil
 }
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
@@ -379,79 +374,21 @@ func (c *bn256Pairing) Run(fvm *FVM, input []byte, contract *Contract) ([]byte, 
 	return false32Byte, nil
 }
 
-type genesisOrganization struct{}
+type SystemContract struct{
+	addr common.Address
+}
 
-func (c *genesisOrganization) RequiredGas(input []byte) uint64 {
+func (c *SystemContract) RequiredGas(input []byte) uint64 {
 	return params.SystemDelegateCall
 }
 
-func (c *genesisOrganization) Run(fvm *FVM, input []byte, contract *Contract) ([]byte, error) {
-	ret, leftOverGas, err := handleDelegateCall(common.GenesisOrganization, fvm, input, contract)
+func (c *SystemContract) Run(fvm *FVM, input []byte, contract *Contract) ([]byte, error) {
+	ret, leftOverGas, err := handleDelegateCall(c.addr, fvm, input, contract)
 	contract.Gas = leftOverGas
 	return ret, err
 }
 
-type registry struct{}
-
-func (c *registry) RequiredGas(input []byte) uint64 {
-	return params.SystemDelegateCall
-}
-
-func (c *registry) Run(fvm *FVM, input []byte, contract *Contract) ([]byte, error) {
-	ret, leftOverGas, err := handleDelegateCall(common.RegistryCenter, fvm, input, contract)
-	contract.Gas = leftOverGas
-	return ret, err
-}
-
-type templateWarehouse struct{}
-
-func (c *templateWarehouse) RequiredGas(input []byte) uint64 {
-	return params.SystemDelegateCall
-}
-
-func (c *templateWarehouse) Run(fvm *FVM, input []byte, contract *Contract) ([]byte, error) {
-	ret, leftOverGas, err := handleDelegateCall(common.TemplateWarehouse, fvm, input, contract)
-	contract.Gas = leftOverGas
-	return ret, err
-}
-
-type ConsensusSatoshiPlus struct{}
-
-func (c *ConsensusSatoshiPlus) RequiredGas(input []byte) uint64 {
-	return params.SystemDelegateCall
-}
-
-func (c *ConsensusSatoshiPlus) Run(fvm *FVM, input []byte, contract *Contract) ([]byte, error) {
-	ret, leftOverGas, err := handleDelegateCall(common.ConsensusSatoshiPlus, fvm, input, contract)
-	contract.Gas = leftOverGas
-	return ret, err
-}
-
-type ConsensusPOA struct{}
-
-func (c *ConsensusPOA) RequiredGas(input []byte) uint64 {
-	return params.SystemDelegateCall
-}
-
-func (c *ConsensusPOA) Run(fvm *FVM, input []byte, contract *Contract) ([]byte, error) {
-	ret, leftOverGas, err := handleDelegateCall(common.ConsensusPOA, fvm, input, contract)
-	contract.Gas = leftOverGas
-	return ret, err
-}
-
-type ValidatorCommittee struct{}
-
-func (c *ValidatorCommittee) RequiredGas(input []byte) uint64 {
-	return params.SystemDelegateCall
-}
-
-func (c *ValidatorCommittee) Run(fvm *FVM, input []byte, contract *Contract) ([]byte, error) {
-	ret, leftOverGas, err := handleDelegateCall(common.ValidatorCommittee, fvm, input, contract)
-	contract.Gas = leftOverGas
-	return ret, err
-}
-
-func handleDelegateCall(systemContractAddr common.ContractCode, fvm *FVM, input []byte, contract *Contract) (
+func handleDelegateCall(systemContractAddr common.Address, fvm *FVM, input []byte, contract *Contract) (
 	ret []byte, leftOverGas uint64, err error) {
 	// actual address of the delegated system contract
 	delegateAddr, instanceAddr, _ := fvm.GetSystemContractInfo(systemContractAddr)

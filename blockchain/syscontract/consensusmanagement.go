@@ -21,7 +21,7 @@ import (
 // for rules, one validator may offline. he must sign up to update his round to newest.
 // if not, he will lose the chance to mine for the chain
 func (m *Manager) GetSignedUpValidators(
-	consensus common.ContractCode,
+	proxyAddr common.Address,
 	block *asiutil.Block,
 	stateDB vm.StateDB,
 	chainConfig *params.ChainConfig,
@@ -29,13 +29,13 @@ func (m *Manager) GetSignedUpValidators(
 
 	gas := uint64(common.SystemContractReadOnlyGas)
 	officialAddr := chaincfg.OfficialAddress
-	contract := m.GetActiveContractByHeight(block.Height(), consensus)
+	contract := m.GetActiveContractByHeight(block.Height(), proxyAddr)
 	if contract == nil {
-		errStr := fmt.Sprintf("Failed to get active contract %s, %d", consensus, block.Height())
+		errStr := fmt.Sprintf("Failed to get active contract %v, %d", proxyAddr, block.Height())
 		log.Error(errStr)
 		panic(errStr)
 	}
-	proxyAddr, abi := vm.ConvertSystemContractAddress(consensus), contract.AbiInfo
+	abi := contract.AbiInfo
 
 	// function name of contract consensus_satoshiplus
 	funcName := common.ContractConsensusSatoshiPlus_GetSignupValidatorsFunction()

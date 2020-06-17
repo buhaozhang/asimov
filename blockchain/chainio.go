@@ -1127,7 +1127,8 @@ func (b *BlockChain) createChainState(chainStartTime int64) error {
 		log.Info("init genesis system contract ", k, "contract address = ", addr.Hex())
 
 		if v[0].InitCode != "" {
-			_, _, _, err = vmenv.Call(sender, vm.ConvertSystemContractAddress(k), common.Hex2Bytes(v[0].InitCode), uint64(4604216000), common.Big0, &beneficiary.Asset, true)
+			proxyAddr := common.HexToAddress(k)
+			_, _, _, err = vmenv.Call(sender, proxyAddr, common.Hex2Bytes(v[0].InitCode), uint64(4604216000), common.Big0, &beneficiary.Asset, true)
 			if err != nil {
 				log.Error("Deploy genesis contract failed when init code")
 				panic(err)

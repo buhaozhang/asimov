@@ -652,7 +652,7 @@ type rpcserverSyncManager interface {
 type rpcserverContractManager interface {
 
 	// Get contract information at a given block height
-	GetActiveContractByHeight(height int32, contractAddr common.ContractCode) *chaincfg.ContractInfo
+	GetActiveContractByHeight(height int32, contractAddr common.Address) *chaincfg.ContractInfo
 
 	// Get issuing contract address of a given asset
 	GetContractAddressByAsset(

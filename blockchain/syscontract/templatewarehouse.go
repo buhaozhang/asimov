@@ -19,7 +19,6 @@ const (
 	TEMPLATE_STATUS_NOTEXIST uint8 = 2
 	TEMPLATE_STATUS_DISABLE  uint8 = 3
 )
-var templateWarehouseAddress = vm.ConvertSystemContractAddress(common.TemplateWarehouse)
 
 // GetTemplates returns all submitted templates by calling system contract of template_warehouse
 func (m *Manager) GetTemplates(
@@ -37,7 +36,7 @@ func (m *Manager) GetTemplates(
 	countInput := common.PackGetTemplateCountInput(getCountFunc, category)
 
 	result, leftOverGas, err := fvm.CallReadOnlyFunction(officialAddr, block, m.chain, stateDB, chainConfig, gas,
-		templateWarehouseAddress, countInput)
+		common.TemplateWarehouse, countInput)
 	if err != nil {
 		log.Errorf("Get contract templates failed, error: %s", err)
 		return 0, nil, err, leftOverGas
@@ -69,7 +68,7 @@ func (m *Manager) GetTemplates(
 		detailInput := common.PackGetTemplateDetailInput(getTemplatesFunc, category, uint64(i))
 
 		ret, leftOverGas, err := fvm.CallReadOnlyFunction(officialAddr, block, m.chain, stateDB, chainConfig,
-			leftOverGas, templateWarehouseAddress, detailInput)
+			leftOverGas, common.TemplateWarehouse, detailInput)
 		if err != nil {
 			log.Errorf("Get contract templates failed, error: %s", err)
 			return 0, nil, err, leftOverGas
@@ -103,7 +102,7 @@ func (m *Manager) GetTemplate(
 	input := common.PackGetTemplateInput(category, name)
 
 	ret, leftOverGas, err := fvm.CallReadOnlyFunction(officialAddr, block, m.chain, stateDB, chainConfig,
-		gas, templateWarehouseAddress, input)
+		gas, common.TemplateWarehouse, input)
 	if err != nil {
 		log.Errorf("Get contract template failed, error: %s", err)
 		return ainterface.TemplateWarehouseContent{}, false, leftOverGas

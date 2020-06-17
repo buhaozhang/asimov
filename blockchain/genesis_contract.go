@@ -5,12 +5,11 @@ package blockchain
 
 import (
 	"github.com/AsimovNetwork/asimov/common"
-	"github.com/AsimovNetwork/asimov/vm/fvm/core/vm"
 )
 
 
 // GetSystemContractInfo returns delegate addresses, original addresses and abi information of system contracts
-func (b *BlockChain) GetSystemContractInfo(delegateAddr common.ContractCode) (common.Address, []byte, string) {
+func (b *BlockChain) GetSystemContractInfo(delegateAddr common.Address) (common.Address, []byte, string) {
 	snapshot := b.BestSnapshot()
 	var blockHeight int32 = 0
 	if snapshot != nil {
@@ -22,7 +21,7 @@ func (b *BlockChain) GetSystemContractInfo(delegateAddr common.ContractCode) (co
 		return common.Address{}, nil, ""
 	}
 
-	return vm.ConvertSystemContractAddress(delegateAddr), contract.Address, contract.AbiInfo
+	return delegateAddr, contract.Address, contract.AbiInfo
 }
 
 // GetTemplateWarehouseInfo returns two values.

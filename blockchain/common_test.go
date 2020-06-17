@@ -62,26 +62,29 @@ var (
 type ManagerTmp struct {
 	chain fvm.ChainContext
 	//  genesis transaction data cache
-	genesisDataCache map[common.ContractCode][]chaincfg.ContractInfo
+	genesisDataCache map[common.Address][]chaincfg.ContractInfo
 	// unrestricted assets cache
 	assetsUnrestrictedCache map[protos.Asset]struct{}
 }
 
 // Init manager by genesis data.
 func (m *ManagerTmp) Init(chain fvm.ChainContext, dataBytes [] byte) error {
-	var cMap map[common.ContractCode][]chaincfg.ContractInfo
+	var cMap map[string][]chaincfg.ContractInfo
 	err := json.Unmarshal(dataBytes, &cMap)
 	if err != nil {
 		return err
 	}
 	m.chain = chain
-	m.genesisDataCache = cMap
+	m.genesisDataCache = make(map[common.Address][]chaincfg.ContractInfo)
+	for k, v := range cMap {
+		m.genesisDataCache[common.HexToAddress(k)] = v
+	}
 	m.assetsUnrestrictedCache = make(map[protos.Asset]struct{})
 	return nil
 }
 
 // Get latest contract by height.
-func (m *ManagerTmp) GetActiveContractByHeight(height int32, delegateAddr common.ContractCode) *chaincfg.ContractInfo {
+func (m *ManagerTmp) GetActiveContractByHeight(height int32, delegateAddr common.Address) *chaincfg.ContractInfo {
 	contracts, ok := m.genesisDataCache[delegateAddr]
 	if !ok {
 		return nil
@@ -106,7 +109,7 @@ func NewContractManagerTmp() ainterface.ContractManager {
 var _ ainterface.ContractManager = (*ManagerTmp)(nil)
 
 func (m *ManagerTmp) GetSignedUpValidators(
-	consensus common.ContractCode,
+	consensus common.Address,
 	block *asiutil.Block,
 	stateDB vm.StateDB,
 	chainConfig *params.ChainConfig,
@@ -120,7 +123,7 @@ func (m *ManagerTmp) GetSignedUpValidators(
 		log.Error(errStr)
 		panic(errStr)
 	}
-	proxyAddr, abi := vm.ConvertSystemContractAddress(consensus), contract.AbiInfo
+	proxyAddr, abi := consensus, contract.AbiInfo
 
 	funcName := common.ContractConsensusSatoshiPlus_GetSignupValidatorsFunction()
 	runCode, err := fvm.PackFunctionArgs(abi, funcName, miners)
@@ -174,7 +177,7 @@ func (m *ManagerTmp) GetContractAddressByAsset(
 		log.Error(errStr)
 		panic(errStr)
 	}
-	proxyAddr, abi := vm.ConvertSystemContractAddress(common.RegistryCenter), contract.AbiInfo
+	proxyAddr, abi := common.RegistryCenter, contract.AbiInfo
 
 	//获取发币合约地址
 	funcName := common.ContractRegistryCenter_GetOrganizationAddressesByAssetsFunction()
@@ -216,7 +219,7 @@ func (m *ManagerTmp) GetAssetInfoByAssetId(
 		log.Error(errStr)
 		panic(errStr)
 	}
-	proxyAddr, abi := vm.ConvertSystemContractAddress(common.RegistryCenter), contract.AbiInfo
+	proxyAddr, abi := common.RegistryCenter, contract.AbiInfo
 
 	//获取发币合约地址
 	funcName := common.ContractRegistryCenter_GetAssetInfoByAssetIdFunction()
@@ -278,7 +281,7 @@ func (m *ManagerTmp) GetTemplates(
 		log.Error(errStr)
 		panic(errStr)
 	}
-	proxyAddr, abi := vm.ConvertSystemContractAddress(common.TemplateWarehouse), contract.AbiInfo
+	proxyAddr, abi := common.TemplateWarehouse, contract.AbiInfo
 
 	// 1、获取模板数量
 	getTemplatesCount := getCountFunc
@@ -366,7 +369,7 @@ func (m *ManagerTmp) GetTemplate(
 		log.Error(errStr)
 		panic(errStr)
 	}
-	proxyAddr, abi := vm.ConvertSystemContractAddress(common.TemplateWarehouse), contract.AbiInfo
+	proxyAddr, abi := common.TemplateWarehouse, contract.AbiInfo
 	getTemplate := common.ContractTemplateWarehouse_GetTemplateFunction()
 	runCode, err := fvm.PackFunctionArgs(abi, getTemplate, category, name)
 	if err != nil {
@@ -419,7 +422,7 @@ func (m *ManagerTmp) GetFees(
 		log.Error(errStr)
 		panic(errStr)
 	}
-	proxyAddr, abi := vm.ConvertSystemContractAddress(common.ValidatorCommittee), contract.AbiInfo
+	proxyAddr, abi := common.ValidatorCommittee, contract.AbiInfo
 
 	// feelist func
 	feelistFunc := common.ContractValidatorCommittee_GetAssetFeeListFunction()
@@ -480,7 +483,7 @@ func (m *ManagerTmp) isLimit(block *asiutil.Block,
 
 	officialAddr := chaincfg.OfficialAddress
 	_, organizationId, assetIndex := asset.AssetFields()
-	registryCenterAddress := vm.ConvertSystemContractAddress(common.RegistryCenter)
+	registryCenterAddress := common.RegistryCenter
 
 	input := common.PackIsRestrictedAssetInput(organizationId, assetIndex)
 	result, _, err := fvm.CallReadOnlyFunction(officialAddr, block, m.chain,
@@ -517,7 +520,7 @@ func (m *ManagerTmp) IsSupport(block *asiutil.Block,
 	// step1: prepare parameters for calling system contract to get organization address
 	_, organizationId, assetIndex := asset.AssetFields()
 	caller := chaincfg.OfficialAddress
-	registryCenterAddress := vm.ConvertSystemContractAddress(common.RegistryCenter)
+	registryCenterAddress := common.RegistryCenter
 
 
 
@@ -877,7 +880,7 @@ func (m *RoundManager) Halt() {
 }
 
 // return unique contract code which represents some consensus
-func (m *RoundManager) GetContract() common.ContractCode {
+func (m *RoundManager) GetContract() common.Address {
 	return common.ConsensusSatoshiPlus
 }
 
@@ -1632,7 +1635,7 @@ func createTestBlock(
 		ts - chaincfg.ActiveNetParams.Params.GenesisBlock.Header.Timestamp < 86400*(365*4+1)
 
 	if coreTeamRewardFlag {
-		fundationAddr := common.HexToAddress(string(common.GenesisOrganization))
+		fundationAddr := common.GenesisOrganization
 		pkScript, _ := txscript.PayToAddrScript(&fundationAddr)
 		txoutLen := len(coinbaseTx.MsgTx().TxOut)
 		for i := 0; i < txoutLen; i++ {

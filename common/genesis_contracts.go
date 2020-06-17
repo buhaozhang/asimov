@@ -2,21 +2,8 @@
 
 package common
 
-// ContractCode identifies a kind of genesis contract.
-type ContractCode string
-
-const (
-	ConsensusPOA ContractCode = "0x63000000000000000000000000000000000000006c"
-	ConsensusSatoshiPlus ContractCode = "0x63000000000000000000000000000000000000006a"
-	GenesisOrganization ContractCode = "0x630000000000000000000000000000000000000064"
-	RegistryCenter ContractCode = "0x630000000000000000000000000000000000000065"
-	TemplateWarehouse ContractCode = "0x630000000000000000000000000000000000000067"
-	ValidatorCommittee ContractCode = "0x63000000000000000000000000000000000000006b"
-)
-
 // Map of ContractCode values back to their constant names for pretty printing.
-var ContractCodeStrings = map[ContractCode]string{
-	ConsensusPOA : "ConsensusPOA",
+var ContractCodeStrings = map[Address]string{
 	ConsensusSatoshiPlus : "ConsensusSatoshiPlus",
 	GenesisOrganization : "GenesisOrganization",
 	RegistryCenter : "RegistryCenter",
@@ -24,88 +11,6 @@ var ContractCodeStrings = map[ContractCode]string{
 	ValidatorCommittee : "ValidatorCommittee",
 }
 
-// String returns the ErrorCode as a human-readable name.
-func (c ContractCode) String() string {
-	if s := ContractCodeStrings[c]; s != "" {
-		return s
-	}
-	return "Unknown ContractCode " + string(c)
-}
-
-
-// Contract ConsensusPOA Definition
-
-func ContractConsensusPOA_BatchRemoveAdminsFunction() (string) {
-	return "batchRemoveAdmins"
-}
-
-func ContractConsensusPOA_GetAddressRolesMapFunction() (string) {
-	return "getAddressRolesMap"
-}
-
-func ContractConsensusPOA_InitFunction() (string) {
-	return "init"
-}
-
-func ContractConsensusPOA_ConfigureFunctionRoleSuperFunction() (string) {
-	return "configureFunctionRoleSuper"
-}
-
-func ContractConsensusPOA_ConfigureFunctionAddressAdvancedFunction() (string) {
-	return "configureFunctionAddressAdvanced"
-}
-
-func ContractConsensusPOA_ConfigureFunctionAddressSuperFunction() (string) {
-	return "configureFunctionAddressSuper"
-}
-
-func ContractConsensusPOA_BatchRemoveValidatorsFunction() (string) {
-	return "batchRemoveValidators"
-}
-
-func ContractConsensusPOA_ConfigureFunctionRoleFunction() (string) {
-	return "configureFunctionRole"
-}
-
-func ContractConsensusPOA_ConfigureAddressRoleFunction() (string) {
-	return "configureAddressRole"
-}
-
-func ContractConsensusPOA_UpdateValidatorsBlockInfoFunction() (string) {
-	return "updateValidatorsBlockInfo"
-}
-
-func ContractConsensusPOA_GetSignupValidatorsFunction() (string) {
-	return "getSignupValidators"
-}
-
-func ContractConsensusPOA_CanPerformFunction() (string) {
-	return "canPerform"
-}
-
-func ContractConsensusPOA_ConfigureFunctionAddressFunction() (string) {
-	return "configureFunctionAddress"
-}
-
-func ContractConsensusPOA_ConfigureFunctionRoleAdvancedFunction() (string) {
-	return "configureFunctionRoleAdvanced"
-}
-
-func ContractConsensusPOA_GetAdminsAndValidatorsFunction() (string) {
-	return "getAdminsAndValidators"
-}
-
-func ContractConsensusPOA_BatchAddValidatorsFunction() (string) {
-	return "batchAddValidators"
-}
-
-func ContractConsensusPOA_BatchAddAdminsFunction() (string) {
-	return "batchAddAdmins"
-}
-
-func ContractConsensusPOA_TransferAssetFunction() (string) {
-	return "transferAsset"
-}
 
 // Contract ConsensusSatoshiPlus Definition
 

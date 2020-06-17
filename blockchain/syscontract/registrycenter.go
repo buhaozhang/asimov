@@ -17,8 +17,6 @@ import (
 	"math/big"
 )
 
-var registryCenterAddress = vm.ConvertSystemContractAddress(common.RegistryCenter)
-
 // GetContractAddressByAsset returns organization addresses by calling system contract of registry
 // according to parameter assets
 func (m *Manager) GetContractAddressByAsset(
@@ -49,7 +47,7 @@ func (m *Manager) GetContractAddressByAsset(
 
 	// call function
 	result, leftOverGas, err := fvm.CallReadOnlyFunction(officialAddr, block, m.chain, stateDB, chainConfig,
-		gas, registryCenterAddress, runCode)
+		gas, common.RegistryCenter, runCode)
 	if err != nil {
 		log.Errorf("Get  contract address of asset failed, error: %s", err)
 		return nil, false, leftOverGas
@@ -94,7 +92,7 @@ func (m *Manager) GetAssetInfoByAssetId(
 
 		runCode, err := fvm.PackFunctionArgs(contract.AbiInfo, funcName, orgId, assetIndex)
 		result, _, err := fvm.CallReadOnlyFunction(officialAddr, block, m.chain, stateDB, chainConfig,
-			common.SystemContractReadOnlyGas, registryCenterAddress, runCode)
+			common.SystemContractReadOnlyGas, common.RegistryCenter, runCode)
 		if err != nil {
 			log.Errorf("Get  asset inf failed, error: %s", err)
 		}
@@ -157,7 +155,7 @@ func (m *Manager) isLimit(block *asiutil.Block,
 	input := common.PackIsRestrictedAssetInput(organizationId, assetIndex)
 	result, _, err := fvm.CallReadOnlyFunction(officialAddr, block, m.chain,
 		stateDB, chaincfg.ActiveNetParams.FvmParam,
-		common.ReadOnlyGas, registryCenterAddress, input)
+		common.ReadOnlyGas, common.RegistryCenter, input)
 	if err != nil {
 		log.Error(err)
 		return -1
@@ -193,7 +191,7 @@ func (m *Manager) IsSupport(block *asiutil.Block,
 	input := common.PackGetOrganizationAddressByIdInput(organizationId, assetIndex)
 	result, leftOverGas, err := fvm.CallReadOnlyFunction(caller, block, m.chain,
 		stateDB, chaincfg.ActiveNetParams.FvmParam,
-		common.SupportCheckGas, registryCenterAddress, input)
+		common.SupportCheckGas, common.RegistryCenter, input)
 	if err != nil {
 		log.Error(err)
 		return false, gasLimit - common.SupportCheckGas + leftOverGas

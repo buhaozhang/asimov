@@ -121,18 +121,18 @@ var coinbaseTx = &protos.MsgTx{
 	LockTime: 0,
 }
 
-func getSystemContractInfo(delegateAddr common.ContractCode) (common.Address, []byte, string) {
+func getSystemContractInfo(delegateAddr common.Address) (common.Address, []byte, string) {
 	beneficiary := coinbaseTx.TxOut[0]
 	cMap := chaincfg.TransferGenesisData(beneficiary.Data)
 
 	var blockHeight int32 = 0
-	contracts, ok := cMap[delegateAddr]
+	contracts, ok := cMap[delegateAddr.String()]
 	if !ok {
 		return common.Address{}, nil, ""
 	}
 	for i := len(contracts) - 1; i >= 0; i-- {
 		if blockHeight >= contracts[i].BlockHeight {
-			return vm.ConvertSystemContractAddress(delegateAddr), contracts[i].Address, contracts[i].AbiInfo
+			return delegateAddr, contracts[i].Address, contracts[i].AbiInfo
 		}
 	}
 
@@ -183,7 +183,8 @@ func createChainState() common.Hash {
 		fmt.Println("contract address = ", addr.Hex())
 
 		if v[0].InitCode != "" {
-			_, _, _, err := vmenv.Call(sender, vm.ConvertSystemContractAddress(k), common.Hex2Bytes(v[0].InitCode), uint64(4604216000), common.Big0, &beneficiary.Asset, true)
+			proxyAddr := common.HexToAddress(k)
+			_, _, _, err := vmenv.Call(sender, proxyAddr, common.Hex2Bytes(v[0].InitCode), uint64(4604216000), common.Big0, &beneficiary.Asset, true)
 			if err != nil {
 				panic(err)
 			}
@@ -220,11 +221,12 @@ func main() {
 
 	// please config your network first, default network is devnet
 	// testnet mainnet devnet
-	network := common.DevelopNet.String()
+	network := common.MainNet.String()
 
-	// first step:
+	//// first step:
 	//fmt.Println("Step 1, write system contracts start...")
-	//writeSystemContract(*systemContractFolder, network)
+	//skipPoa := network == common.MainNet.String()
+	//writeSystemContract(*systemContractFolder, network, skipPoa)
 	//fmt.Println("Step 1, write system contracts end...")
 
 	// second step:

@@ -8,11 +8,6 @@ import (
 	"github.com/AsimovNetwork/asimov/common"
 )
 
-// mainnetGenesisHash is the hash of the first block in the block chain for the main
+// mainnetGenesisHash is the hash of the first block in the block chain for the mainnet
 // network (genesis block).
-var mainnetGenesisHash = common.Hash([common.HashLength]byte{
-	0xe7, 0x90, 0x2b, 0x5f, 0x58, 0x39, 0x91, 0x7c,
-	0xea, 0xe1, 0x30, 0x3a, 0x34, 0xb3, 0x3d, 0x0f,
-	0x70, 0x2b, 0x09, 0x2c, 0x4c, 0xa5, 0xd1, 0x05,
-	0xc7, 0x0f, 0xa7, 0xcb, 0x8d, 0xfa, 0xf3, 0xb5,
-})
+var mainnetGenesisHash = common.HexToHash("34d743658fe49e7c033ede43f26672c3f81327e56a34706570b1d0464837a246")

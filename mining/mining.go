@@ -782,8 +782,7 @@ priorityQueueLoop:
 
 	// reward for core team
 	if coreTeamRewardFlag {
-		fundationAddr := common.HexToAddress(string(common.GenesisOrganization))
-		pkScript, _ := txscript.PayToAddrScript(&fundationAddr)
+		pkScript, _ := txscript.PayToAddrScript(&common.GenesisOrganization)
 		txoutLen := len(coinbaseTx.MsgTx().TxOut)
 		for i := 0; i < txoutLen; i++ {
 			value := coinbaseTx.MsgTx().TxOut[i].Value

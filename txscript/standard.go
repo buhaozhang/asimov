@@ -552,8 +552,7 @@ func ExtractPkScriptAddrs(pkScript []byte) (ScriptClass, []common.IAddress, int,
 			addrs = append(addrs, addr)
 		}
 	case TemplateTy:
-		addr := common.HexToAddress(string(common.TemplateWarehouse))
-		addrs = append(addrs, &addr)
+		addrs = append(addrs, &common.TemplateWarehouse)
 	}
 
 	return scriptClass, addrs, requiredSigs, nil

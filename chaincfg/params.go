@@ -122,10 +122,6 @@ type Params struct {
 	// poa round source data.
 	CollectInterval int32
 
-	// AdjustmentInterval is the difference of generate blocks from bitcoin
-	// (avg time of CollectInterval) and asimov (avg time of round)
-	AdjustmentInterval int32
-
 	// MappingDelayInterval is the interval of block rounds when the
 	// validator can work after a bitcoin mapping tx include in block.
 	MappingDelayInterval uint32
@@ -168,19 +164,26 @@ func (p *Params) Name() string {
 var MainNetParams = Params{
 	Net:         common.MainNet,
 	DefaultPort: "8777",
-	DNSSeeds:    []DNSSeed{},
+	DNSSeeds:    []DNSSeed{
+		{"seed1.asimov.testnet", false},
+		{"seed2.asimov.testnet", false},
+	},
 
 	// Chain parameters
-	GenesisHash:              &mainnetGenesisHash,
+	GenesisHash:       &mainnetGenesisHash,
+	GenesisCandidates: []common.Address{
+		common.HexToAddress("0x66f29f0fd5008c9b676a32744839d9953d07e2bfc6"),
+		common.HexToAddress("0x66347c825835a984374d16bddbf674cfb6645e7bc1"),
+		common.HexToAddress("0x663cb5d3ec78b7e37a218f7ee50c84118e59e46a76"),
+	},
 	CoinbaseMaturity:         4320,
 	SubsidyReductionInterval: 25000000,
 	RoundSize:                720,
 	BtcBlocksPerRound:        6,
-	// TODO need adjustment
-	CollectHeight:   600000,
+
+	CollectHeight:   632500,
 	CollectInterval: 2016,
-	// half day
-	AdjustmentInterval:   43200,
+
 	MappingDelayInterval: 24 * 3,
 	KeepAliveInterval:    24,
 
@@ -190,15 +193,17 @@ var MainNetParams = Params{
 	//   target proof of work timespan / target proof of work spacing
 	RuleChangeActivationThreshold: 1916, // 95% of MinerConfirmationWindow
 	MinerConfirmationWindow:       2016, //
-	Deployments: [DefinedDeployments]ConsensusDeployment{
-		DeploymentTestDummy: {
-			BitNumber:  28,
-			StartTime:  1199145601, // January 1, 2008 UTC
-			ExpireTime: 1230767999, // December 31, 2008 UTC
-		},
-	},
+	Deployments: [DefinedDeployments]ConsensusDeployment{},
 
 	FvmParam: params.MainnetChainConfig,
+
+	Bitcoin: []*BitcoinParams{
+		{
+			Host:        "btc.asimov.network:8300",
+			RpcUser:     "asimov",
+			RpcPassword: "asimov",
+		},
+	},
 }
 
 // DevelopNetParams defines the network parameters for the develop
@@ -224,8 +229,7 @@ var DevelopNetParams = Params{
 	BtcBlocksPerRound:        1,
 	CollectHeight:            10100,
 	CollectInterval:          144,
-	// three hours
-	AdjustmentInterval:   1080,
+
 	MappingDelayInterval: 2,
 	KeepAliveInterval:    2,
 
@@ -283,8 +287,7 @@ var TestNetParams = Params{
 	BtcBlocksPerRound: 2,
 	CollectHeight:     60,
 	CollectInterval:   144,
-	// three hours
-	AdjustmentInterval:   1080,
+
 	MappingDelayInterval: 2,
 	KeepAliveInterval:    24,
 
