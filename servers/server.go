@@ -2574,10 +2574,11 @@ func NewServer(db database.Transactor, stateDB database.Database, agentBlacklist
 	// Create the mining policy and block template generator based on the
 	// configuration options.
 	policy := mining.Policy{
-		TxMinPrice: chaincfg.Cfg.MinTxPrice,
+		TxMinPrice:            cfg.MinTxPrice,
 		BlockProductedTimeOut: cfg.BlkProductedTimeOut,
-		TxConnectTimeOut: cfg.TxConnectTimeOut,
-		UtxoValidateTimeOut: cfg.UtxoValidateTimeOut,
+		TxConnectTimeOut:      cfg.TxConnectTimeOut,
+		UtxoValidateTimeOut:   cfg.UtxoValidateTimeOut,
+		BlockSyncTime:         cfg.BlockSyncTime,
 	}
 	blockTemplateGenerator := mining.NewBlkTmplGenerator(&policy,
 		s.txMemPool, s.sigMemPool, s.chain)

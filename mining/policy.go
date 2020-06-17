@@ -33,4 +33,8 @@ type Policy struct {
 	// UtxoValidateTimeOut limits source txs' utxo validating time.
 	// It is the maximum percent (default 0.35) of producing block interval.
 	UtxoValidateTimeOut float64
+
+	// BlockSyncTime is the time for synchronizing a block.
+	// The default value is 1000 ms.
+	BlockSyncTime float64
 }
