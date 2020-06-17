@@ -158,7 +158,7 @@ type FConfig struct {
 	BlkProductedTimeOut  float64       `long:"blkproductedtimeout" description:"the value for the policy BlockProductedTimeOut,the value must be in range of (0, 1)"`
 	TxConnectTimeOut     float64       `long:"txconnecttimeout" description:"the value for the policy TxConnectTimeOut,the value must be in range of (0, 1)"`
 	UtxoValidateTimeOut  float64       `long:"utxovalidatetimeout" description:"the time for validating utxos,the value must be in range of (0, 1)"`
-	BlockSyncTime        float64           `long:"blocksynctime" description:"the time for synchronizing a block,the time unit is millisecond"`
+	BlockSyncTime        float64       `long:"blocksynctime" description:"the time for synchronizing a block,the time unit is millisecond"`
 	DisableBlockEarly    bool          `long:"disableblockearly" description:"Generate blocks early when the last block is received and consensus is satoshi"`
 	MaxOrphanTxs         int           `long:"maxorphantx" description:"Max number of orphan transactions to keep in memory"`
 	MaxOrphanTxSize      int           `long:"maxorphantxsize" description:"Max size of an orphan transaction to allow in memory"`
