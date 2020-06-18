@@ -124,7 +124,7 @@ func Contract%s_%sFunction() (string) {
 
 }
 
-func writeContracts(contractSlice []*compiledContract, network string) {
+func writeContracts(contractSlice []*compiledContract, network string, skipPoa bool) {
 	file, err := os.Create("contract.go")
 	if err != nil {
 		panic(err)

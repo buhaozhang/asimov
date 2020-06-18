@@ -60,7 +60,7 @@ func (m *RoundManager) Halt() {
 }
 
 func (m *RoundManager) GetContract() common.Address {
-	return common.ConsensusSatoshiPlus
+	return common.ConsensusPOA
 }
 
 func NewRoundManager(addrs []*common.Address) *RoundManager {

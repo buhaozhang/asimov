@@ -69,6 +69,9 @@ func GetPreCompiledContract(addr common.Address) PrecompiledContract {
 		PrecompiledContractsHomestead[addr] = contract
 		return contract
 	}
+	if addr == common.ConsensusPOA {
+		return nil
+	}
 	return nil
 }
 
