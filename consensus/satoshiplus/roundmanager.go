@@ -125,7 +125,7 @@ func (m *RoundManager) GetValidators(blockHash common.Hash, round uint32, fn ain
 				continue
 			}
 			if filters[i] > 0 {
-				candidates[sv] = miners[mineraddrs[i]]
+				candidates[sv] += miners[mineraddrs[i]]
 				totalWeight += candidates[sv]
 			}
 		}
