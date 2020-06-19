@@ -196,7 +196,7 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 			}
 			return nil
 		}
-		// For multi-shot connections, start a concurrent to serve and loop back
+		// For multi-shot connections, start a goroutine to serve and loop back
 		pend.Add(1)
 
 		go func(reqs []*serverRequest, batch bool) {
