@@ -74,6 +74,8 @@ type Server struct {
 	run      int32
 	codecsMu sync.Mutex
 	codecs   mapset.Set
+
+	concurrentControl chan struct{}
 }
 
 // rpcRequest represents a raw incoming RPC request
