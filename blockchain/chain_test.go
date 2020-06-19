@@ -181,7 +181,7 @@ func TestLocateInventory(t *testing.T) {
 	// 	genesis -> 1 -> 2 -> ... -> 15 -> 16  -> 17  -> 18
 	// 	                              \-> 16a -> 17a
 	tip := tstTip
-	chain, teardownFunc, err := newFakeChain(&chaincfg.DevelopNetParams)
+	chain, teardownFunc, err := newFakeChain(&chaincfg.MainNetParams)
 	if err != nil || chain == nil {
 		t.Errorf("newFakeChain error %v", err)
 	}
@@ -545,7 +545,7 @@ func TestHeightToHashRange(t *testing.T) {
 	// 	genesis -> 1 -> 2 -> ... -> 15 -> 16  -> 17  -> 18
 	// 	                              \-> 16a -> 17a -> 18a (unvalidated)
 	tip := tstTip
-	chain, teardownFunc, err := newFakeChain(&chaincfg.DevelopNetParams)
+	chain, teardownFunc, err := newFakeChain(&chaincfg.MainNetParams)
 	if err != nil || chain == nil {
 		t.Errorf("newFakeChain error %v", err)
 	}
@@ -640,7 +640,7 @@ func TestIntervalBlockHashes(t *testing.T) {
 	// 	genesis -> 1 -> 2 -> ... -> 15 -> 16  -> 17  -> 18
 	// 	                              \-> 16a -> 17a -> 18a (unvalidated)
 	tip := tstTip
-	chain, teardownFunc, err := newFakeChain(&chaincfg.DevelopNetParams)
+	chain, teardownFunc, err := newFakeChain(&chaincfg.MainNetParams)
 	if err != nil || chain == nil {
 		t.Errorf("newFakeChain error %v", err)
 	}

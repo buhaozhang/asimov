@@ -17,7 +17,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path"
 	"regexp"
 	"runtime"
 	"strings"
@@ -45,12 +44,6 @@ func writeSystemContract(systemContractFolder, network string, skipPoa bool) {
 	contractSlice := make([]*compiledContract, 0)
 	// compile contracts
 	for _, contract := range contracts {
-		if skipPoa {
-			_, file := path.Split(contract)
-			if strings.Contains(strings.ToUpper(file), "POA") {
-				continue
-			}
-		}
 		contractName, byteCode, abi, delegateAddr := compile(contract)
 		contractSlice = append(contractSlice, &compiledContract{
 			name:         contractName,
@@ -62,7 +55,7 @@ func writeSystemContract(systemContractFolder, network string, skipPoa bool) {
 	}
 
 	writeContractsName(contractSlice)
-	writeContracts(contractSlice, network)
+	writeContracts(contractSlice, network, skipPoa)
 
 	err = os.Chdir("../../")
 	if err != nil {
@@ -144,6 +137,11 @@ import (
 	writeBytes(file, []byte(imports))
 
 	for _, v := range contractSlice {
+		if skipPoa {
+			if strings.Contains(strings.ToUpper(v.name), "POA") {
+				continue
+			}
+		}
 		abiSlice := make([]map[string]interface{}, 0)
 		err := json.Unmarshal([]byte(v.abi), &abiSlice)
 		if err != nil {
@@ -190,6 +188,11 @@ import (
 `
 	writeBytes(file, []byte(deployedTemplateContract))
 	for _, v := range contractSlice {
+		if skipPoa {
+			if strings.Contains(strings.ToUpper(v.name), "POA") {
+				continue
+			}
+		}
 		temp := `	common.%s: {{
 		Name:	 %q,
 		Code:    "%s",

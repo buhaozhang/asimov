@@ -89,7 +89,7 @@ func TestValidators(t *testing.T) {
 	defer os.RemoveAll(cfg.DataDir)
 	defer db.Close()
 
-	chaincfg.ActiveNetParams.Params = &chaincfg.DevelopNetParams
+	chaincfg.ActiveNetParams.Params = &chaincfg.MainNetParams
 	rm := NewRoundManager()
 
 	bpc := minersync.NewBtcPowerCollector(

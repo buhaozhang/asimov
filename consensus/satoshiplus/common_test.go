@@ -21,9 +21,8 @@ import (
 	"github.com/AsimovNetwork/asimov/database/dbimpl/ethdb"
 	"github.com/AsimovNetwork/asimov/mempool"
 	"github.com/AsimovNetwork/asimov/mining"
-	"github.com/AsimovNetwork/asimov/netsync"
-	"github.com/AsimovNetwork/asimov/protos"
 	"github.com/AsimovNetwork/asimov/rpcs/rpc"
+	"github.com/AsimovNetwork/asimov/protos"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -95,7 +94,7 @@ func newFakeChain(paramstmp *chaincfg.Params) (*blockchain.BlockChain, func(), *
 		WSEndpoint:           chaincfg.DefaultWSEndPoint,
 		WSModules:            chaincfg.DefaultWSModules,
 		DevelopNet:           true,
-		Consensustype:        "poa",
+		Consensustype:        "satoshiplus",
 	}
 
 	consensus := common.GetConsensus(cfg.Consensustype)
@@ -107,15 +106,15 @@ func newFakeChain(paramstmp *chaincfg.Params) (*blockchain.BlockChain, func(), *
 
 	var teardown func()
 	cfg.DataDir = cleanAndExpandPath(cfg.DataDir)
-	cfg.DataDir = filepath.Join(cfg.DataDir, "devnetUnitTest")
+	cfg.DataDir = filepath.Join(cfg.DataDir, "UnitTest")
 
 	// Append the network type to the logger directory so it is "namespaced"
 	// per network in the same fashion as the data directory.
 	cfg.LogDir = cleanAndExpandPath(cfg.LogDir)
-	cfg.LogDir = filepath.Join(cfg.LogDir, "devnetUnitTest")
+	cfg.LogDir = filepath.Join(cfg.LogDir, "UnitTest")
 
 	cfg.StateDir = cleanAndExpandPath(cfg.StateDir)
-	cfg.StateDir = filepath.Join(cfg.StateDir, "devnetUnitTest")
+	cfg.StateDir = filepath.Join(cfg.StateDir, "UnitTest")
 
 	// Load the block database.
 	db, err := loadBlockDB(cfg)
@@ -143,8 +142,16 @@ func newFakeChain(paramstmp *chaincfg.Params) (*blockchain.BlockChain, func(), *
 	contractManager := syscontract.NewContractManager()
 
 	dir, err := os.Getwd()
-	genesisBlock, err := asiutil.LoadBlockFromFile("../../genesisbin/devnet.block")
-	if err != nil {
+	var loadBlkErr error
+	var genesisBlock *protos.MsgBlock
+	if chaincfg.ActiveNetParams.Params.Net == common.TestNet {
+		genesisBlock, loadBlkErr = asiutil.LoadBlockFromFile("../../genesisbin/testnet.block")
+	} else if chaincfg.ActiveNetParams.Params.Net == common.DevelopNet {
+		genesisBlock, loadBlkErr = asiutil.LoadBlockFromFile("../../genesisbin/devnet.block")
+	} else {
+		genesisBlock, loadBlkErr = asiutil.LoadBlockFromFile("../../genesisbin/mainnet.block")
+	}
+	if loadBlkErr != nil {
 		strErr := "Load genesis block error, " + err.Error() + dir
 		return nil, nil, nil, errors.New(strErr)
 	}
@@ -228,7 +235,7 @@ func loadBlockDB(cfg *chaincfg.FConfig) (database.Database, error) {
 
 	//在测试代码中要连接测试网络
 	//db, err := database.Open(cfg.DbType, dbPath, configuration.ActiveNetParams.Net)
-	db, err := dbdriver.Open(testDbType, dbPath, chaincfg.DevelopNetParams.Net)
+	db, err := dbdriver.Open(testDbType, dbPath, chaincfg.MainNetParams.Net)
 	if err != nil {
 		// Return the error if it's not because the database doesn't
 		// exist.
@@ -245,13 +252,18 @@ func loadBlockDB(cfg *chaincfg.FConfig) (database.Database, error) {
 		}
 		//在测试代码中要连接测试网络
 		//db, err = database.Create(cfg.DbType, dbPath, configuration.ActiveNetParams.Net)
-		db, err = dbdriver.Create(testDbType, dbPath, chaincfg.DevelopNetParams.Net)
+		db, err = dbdriver.Create(testDbType, dbPath, chaincfg.MainNetParams.Net)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	return db, nil
+}
+
+
+func ProcessBlock(template *mining.BlockTemplate, flags common.BehaviorFlags) (bool, error) {
+	return false, nil
 }
 
 func createPoaConfig(privateKey string, paramstmp *chaincfg.Params) (*params.Config, func(), error) {
@@ -285,23 +297,23 @@ func createPoaConfig(privateKey string, paramstmp *chaincfg.Params) (*params.Con
 	txMemPool := mempool.New(&txC)
 	sigMemPool := mempool.NewSigPool()
 
-	syncManager, err := netsync.New(&netsync.Config{
-		PeerNotifier:       nil,
-		Chain:              chain,
-		TxMemPool:          txMemPool,
-		SigMemPool:         sigMemPool,
-		ChainParams:        &chaincfg.DevelopNetParams,
-		DisableCheckpoints: chaincfg.Cfg.DisableCheckpoints,
-		MaxPeers:           chaincfg.Cfg.MaxPeers,
-		//FeeEstimator:       s.feeEstimator,
-		Account: &acc,
-		BroadcastMessage: func(msg protos.Message, exclPeers ...interface{}) {
-			return
-		},
-	})
-	if err != nil {
-		return nil, teardownFunc, err
-	}
+	//syncManager, err := netsync.New(&netsync.Config{
+	//	PeerNotifier:       nil,
+	//	Chain:              chain,
+	//	TxMemPool:          txMemPool,
+	//	SigMemPool:         sigMemPool,
+	//	ChainParams:        &chaincfg.MainNetParams,
+	//	DisableCheckpoints: chaincfg.Cfg.DisableCheckpoints,
+	//	MaxPeers:           chaincfg.Cfg.MaxPeers,
+	//	//FeeEstimator:       s.feeEstimator,
+	//	Account: &acc,
+	//	BroadcastMessage: func(msg protos.Message, exclPeers ...interface{}) {
+	//		return
+	//	},
+	//})
+	//if err != nil {
+	//	return nil, teardownFunc, err
+	//}
 
 	policy := mining.Policy{
 		TxMinPrice: 0,
@@ -310,7 +322,7 @@ func createPoaConfig(privateKey string, paramstmp *chaincfg.Params) (*params.Con
 
 	consensusConfig := params.Config{
 		BlockTemplateGenerator: blockTemplateGenerator,
-		ProcessBlock:           syncManager.ProcessBlock,
+		ProcessBlock:           ProcessBlock,
 		IsCurrent:              chain.IsCurrent,
 		ProcessSig:             sigMemPool.ProcessSig,
 		Chain:                  chain,
@@ -363,8 +375,10 @@ func (c *FakeBtcClient) UpInterval() {
 	interval := uint32(300)
 	add := uint32(30)
 	c.minerInfo[0].Time = 0
-	for i := int(chaincfg.ActiveNetParams.CollectInterval); i < len(c.minerInfo); i++ {
-		c.minerInfo[i].Time = c.minerInfo[i-1].Time + interval
+	for i := int(chaincfg.ActiveNetParams.CollectInterval); i < len(c.minerInfo); i = i + int(chaincfg.ActiveNetParams.BtcBlocksPerRound) {
+		for j := 0;j < int(chaincfg.ActiveNetParams.BtcBlocksPerRound);j++ {
+			c.minerInfo[i+j].Time = c.minerInfo[i-1].Time + interval
+		}
 		interval += add
 	}
 }

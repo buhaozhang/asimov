@@ -329,7 +329,7 @@ func CheckTransactionInputs(tx *asiutil.Tx, txHeight int32, utxoView *txo.UtxoVi
 		if utxo.IsCoinBase() {
 			originHeight := utxo.BlockHeight()
 			blocksSincePrev := txHeight - originHeight
-			coinbaseMaturity := int32(chaincfg.DevelopNetParams.CoinbaseMaturity)
+			coinbaseMaturity := int32(chaincfg.MainNetParams.CoinbaseMaturity)
 			if blocksSincePrev < coinbaseMaturity {
 				str := fmt.Sprintf("tried to spend coinbase "+
 					"transaction output %v from height %v "+

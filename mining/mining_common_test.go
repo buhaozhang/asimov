@@ -290,7 +290,7 @@ func newFakeChain(paramstmp *chaincfg.Params) (*blockchain.BlockChain, func(), e
 		WSEndpoint:           chaincfg.DefaultWSEndPoint,
 		WSModules:            chaincfg.DefaultWSModules,
 		DevelopNet:           true,
-		Consensustype:        "poa",
+		Consensustype:        "satoshiplus",
 	}
 
 	consensus := common.GetConsensus(cfg.Consensustype)
@@ -302,15 +302,15 @@ func newFakeChain(paramstmp *chaincfg.Params) (*blockchain.BlockChain, func(), e
 
 	var teardown func()
 	cfg.DataDir = cleanAndExpandPath(cfg.DataDir)
-	cfg.DataDir = filepath.Join(cfg.DataDir, "devnetUnitTest")
+	cfg.DataDir = filepath.Join(cfg.DataDir, "UnitTest")
 
 	// Append the network type to the logger directory so it is "namespaced"
 	// per network in the same fashion as the data directory.
 	cfg.LogDir = cleanAndExpandPath(cfg.LogDir)
-	cfg.LogDir = filepath.Join(cfg.LogDir, "devnetUnitTest")
+	cfg.LogDir = filepath.Join(cfg.LogDir, "UnitTest")
 
 	cfg.StateDir = cleanAndExpandPath(cfg.StateDir)
-	cfg.StateDir = filepath.Join(cfg.StateDir, "devnetUnitTest")
+	cfg.StateDir = filepath.Join(cfg.StateDir, "UnitTest")
 
 	// Load the block database.
 	db, err := loadBlockDB(cfg)
@@ -337,8 +337,16 @@ func newFakeChain(paramstmp *chaincfg.Params) (*blockchain.BlockChain, func(), e
 	contractManager := syscontract.NewContractManager()
 
 	dir, err := os.Getwd()
-	genesisBlock, err := asiutil.LoadBlockFromFile("../genesisbin/devnet.block")
-	if err != nil {
+	var loadBlkErr error
+	var genesisBlock *protos.MsgBlock
+	if chaincfg.ActiveNetParams.Params.Net == common.TestNet {
+		genesisBlock, loadBlkErr = asiutil.LoadBlockFromFile("../genesisbin/testnet.block")
+	} else if chaincfg.ActiveNetParams.Params.Net == common.DevelopNet {
+		genesisBlock, loadBlkErr = asiutil.LoadBlockFromFile("../genesisbin/devnet.block")
+	} else {
+		genesisBlock, loadBlkErr = asiutil.LoadBlockFromFile("../genesisbin/mainnet.block")
+	}
+	if loadBlkErr != nil {
 		strErr := "Load genesis block error, " + err.Error() + dir
 		return nil, nil, errors.New(strErr)
 	}

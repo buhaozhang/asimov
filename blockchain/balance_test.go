@@ -17,7 +17,7 @@ func TestCalculateBalance(t *testing.T) {
 	parivateKeyList := []string{
 		"0xd0f0461b7b4d26cf370e6c73b58ef7fa26e8e30853a8cee901ed42cf0879cb6e", //privateKey0
 	}
-	accList, _, chain, teardownFunc, err := createFakeChainByPrivateKeys(parivateKeyList, chaincfg.DevelopNetParams.RoundSize)
+	accList, _, chain, teardownFunc, err := createFakeChainByPrivateKeys(parivateKeyList, chaincfg.MainNetParams.RoundSize)
 	defer teardownFunc()
 	acc := accList[0]
 

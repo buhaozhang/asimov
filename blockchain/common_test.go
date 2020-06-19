@@ -1030,7 +1030,7 @@ func newFakeChain(paramstmp *chaincfg.Params) (*BlockChain, func(), error) {
 		WSEndpoint:           chaincfg.DefaultWSEndPoint,
 		WSModules:            chaincfg.DefaultWSModules,
 		DevelopNet:           true,
-		Consensustype:        "poa",
+		Consensustype:        "satoshiplus",
 		MaxTimeOffset:        30,
 	}
 
@@ -1043,15 +1043,15 @@ func newFakeChain(paramstmp *chaincfg.Params) (*BlockChain, func(), error) {
 
 	var teardown func()
 	cfg.DataDir = cleanAndExpandPath(cfg.DataDir)
-	cfg.DataDir = filepath.Join(cfg.DataDir, "devnetUnitTest")
+	cfg.DataDir = filepath.Join(cfg.DataDir, "UnitTest")
 
 	// Append the network type to the logger directory so it is "namespaced"
 	// per network in the same fashion as the data directory.
 	cfg.LogDir = cleanAndExpandPath(cfg.LogDir)
-	cfg.LogDir = filepath.Join(cfg.LogDir, "devnetUnitTest")
+	cfg.LogDir = filepath.Join(cfg.LogDir, "UnitTest")
 
 	cfg.StateDir = cleanAndExpandPath(cfg.StateDir)
-	cfg.StateDir = filepath.Join(cfg.StateDir, "devnetUnitTest")
+	cfg.StateDir = filepath.Join(cfg.StateDir, "UnitTest")
 
 	// Load the block database.
 	db, err := loadBlockDB(cfg)
@@ -1078,7 +1078,7 @@ func newFakeChain(paramstmp *chaincfg.Params) (*BlockChain, func(), error) {
 	contractManager := NewContractManagerTmp()
 
 	dir, err := os.Getwd()
-	genesisBlock, err := asiutil.LoadBlockFromFile("../genesisbin/devnet.block")
+	genesisBlock, err := asiutil.LoadBlockFromFile("../genesisbin/mainnet.block")
 	if err != nil {
 		strErr := "Load genesis block error, " + err.Error() + dir
 		return nil, nil, errors.New(strErr)
@@ -1941,7 +1941,7 @@ func createFakeChainByPrivateKeys(
 		addressList = append(addressList, acc.Address.StandardAddress())
 	}
 
-	netParam := chaincfg.DevelopNetParams
+	netParam := chaincfg.MainNetParams
 	if roundSize > 0 {
 		netParam.RoundSize = roundSize
 	}
