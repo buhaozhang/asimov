@@ -315,11 +315,13 @@ func (bpc *BtcPowerCollector) Init(height, count int32) ([]*MinerInfo, error) {
 	}
 	// if miner not enough, sync from btc node.
 	if int32(minerLen) < count {
-		newminers, _, err := bpc.UpdateMinerInfo(count - int32(minerLen))
-		if err != nil {
-			return nil, err
+		for i := int32(0); i < count - int32(minerLen); i += maxUpdateMiner {
+			newminers, _, err := bpc.UpdateMinerInfo(maxUpdateMiner)
+			if err != nil {
+				return nil, err
+			}
+			miners = append(miners, newminers...)
 		}
-		miners = append(miners, newminers...)
 	} else {
 		lastestHeight, err := bpc.getMinerInfoLastestHeight(bpc.latestHeight)
 		if err == nil && lastestHeight > 0 {
