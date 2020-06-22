@@ -37,7 +37,7 @@ const (
 	DefaultBanThreshold         = 100
 	DefaultMaxRPCClients        = 10
 	DefaultMaxRPCWebsockets     = 25
-	DefaultMaxRPCConcurrentReqs = 20
+	DefaultMaxRPCConcurrentReqs = 8
 	// DefaultMinTxPrice is the minimum price in xing that is required
 	// for a transaction to be treated as free for relay and mining
 	// purposes.  It is also used to help determine if a transaction is

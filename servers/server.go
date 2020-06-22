@@ -2712,20 +2712,20 @@ func NewServer(db database.Transactor, stateDB database.Database, agentBlacklist
 		}
 
 		nodeCfg := node.Config{
-			DataDir:      chaincfg.DefaultAppDataDir,
-			HTTPEndpoint: cfg.HTTPEndpoint,
-			HTTPModules:  append(cfg.HTTPModules, "eth", "shh", "asimov"),
-			HTTPTimeouts: cfg.HTTPTimeouts,
-			WSEndpoint:   cfg.WSEndpoint,
-			WSOrigins:    cfg.WSOrigins,
-			WSModules:    append(cfg.WSModules, "eth", "shh", "asimov"),
+			DataDir:          chaincfg.DefaultAppDataDir,
+			HTTPEndpoint:     cfg.HTTPEndpoint,
+			HTTPModules:      append(cfg.HTTPModules, "eth", "shh", "asimov"),
+			HTTPTimeouts:     cfg.HTTPTimeouts,
+			WSEndpoint:       cfg.WSEndpoint,
+			WSOrigins:        cfg.WSOrigins,
+			WSModules:        append(cfg.WSModules, "eth", "shh", "asimov"),
+			IPCPath:          "asimov.ipc",
+			HTTPCors:         []string{"*"},
+			HTTPVirtualHosts: []string{"*"},
+			NoUSB:            true,
+			Logger:           logger.GetLogger("RPCS"),
+			MaxConcurrent:    cfg.RPCMaxConcurrentReqs,
 		}
-		nodeCfg.IPCPath = "asimov.ipc"
-		nodeCfg.HTTPCors = []string{"*"}
-		nodeCfg.HTTPVirtualHosts = []string{"*"}
-		// cfg.WSOrigins = []string{"*"}
-		nodeCfg.Logger = logger.GetLogger("RPCS")
-		nodeCfg.NoUSB = true
 
 		s.stack, err = node.New(&nodeCfg)
 		if err != nil {

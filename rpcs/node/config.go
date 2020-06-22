@@ -121,6 +121,9 @@ type Config struct {
 
 	// Logger is a custom logger to use with the p2p.Server.
 	Logger logger.Logger `toml:",omitempty"`
+
+	// MaxConcurrent is the maximum number of concurrent processes handled by rpc
+	MaxConcurrent int `toml:",omitempty"`
 }
 
 // IPCEndpoint resolves an IPC endpoint based on a configured value, taking into

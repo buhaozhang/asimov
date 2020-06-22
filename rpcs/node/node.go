@@ -116,30 +116,9 @@ func (n *Node) Start() error {
 	defer n.lock.Unlock()
 
 	// Short circuit if the node's already running
-	// if n.server != nil {
-	// 	return ErrNodeRunning
-	// }
 	if err := n.openDataDir(); err != nil {
 		return err
 	}
-
-	// Initialize the p2p server. This creates the node key and
-	// discovery databases.
-	// n.serverConfig = n.config.P2P
-	// n.serverConfig.PrivateKey = n.config.NodeKey()
-	// n.serverConfig.Name = n.config.NodeName()
-	// n.serverConfig.Logger = n.log
-	// if n.serverConfig.StaticNodes == nil {
-	// 	n.serverConfig.StaticNodes = n.config.StaticNodes()
-	// }
-	// if n.serverConfig.TrustedNodes == nil {
-	// 	n.serverConfig.TrustedNodes = n.config.TrustedNodes()
-	// }
-	// if n.serverConfig.NodeDatabase == "" {
-	// 	n.serverConfig.NodeDatabase = n.config.NodeDB()
-	// }
-	// running := &p2p.Server{Config: n.serverConfig}
-	// n.log.Info("Starting peer-to-peer node", "instance", n.serverConfig.Name)
 
 	// Otherwise copy and specialize the P2P configuration
 	services := make(map[reflect.Type]Service)
@@ -164,28 +143,7 @@ func (n *Node) Start() error {
 		}
 		services[kind] = service
 	}
-	// Gather the protocols and start the freshly assembled P2P server
-	// for _, service := range services {
-	// 	running.Protocols = append(running.Protocols, service.Protocols()...)
-	// }
-	// if err := running.Start(); err != nil {
-	// 	return convertFileLockError(err)
-	// }
-	// // Start each of the services
-	// started := []reflect.Type{}
-	// for kind, service := range services {
-	// 	// Start the next service, stopping all previous upon failure
-	// 	if err := service.Start(running); err != nil {
-	// 		for _, kind := range started {
-	// 			services[kind].Stop()
-	// 		}
-	// 		running.Stop()
-	//
-	// 		return err
-	// 	}
-	// 	// Mark the service started for potential cleanup
-	// 	started = append(started, kind)
-	// }
+
 	// Lastly start the configured RPC interfaces
 	if err := n.startRPC(services); err != nil {
 		for _, service := range services {
@@ -257,7 +215,7 @@ func (n *Node) startRPC(services map[reflect.Type]Service) error {
 // startInProc initializes an in-process RPC endpoint.
 func (n *Node) startInProc(apis []rpc.API) error {
 	// Register all the APIs exposed by the services
-	handler := rpc.NewServer()
+	handler := rpc.NewServer(n.config.MaxConcurrent)
 	for _, api := range apis {
 		if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 			return err
@@ -281,7 +239,7 @@ func (n *Node) startIPC(apis []rpc.API) error {
 	if n.ipcEndpoint == "" {
 		return nil // IPC disabled.
 	}
-	listener, handler, err := rpc.StartIPCEndpoint(n.ipcEndpoint, apis)
+	listener, handler, err := rpc.StartIPCEndpoint(n.ipcEndpoint, apis, n.config.MaxConcurrent)
 	if err != nil {
 		return err
 	}
@@ -311,7 +269,7 @@ func (n *Node) startHTTP(endpoint string, apis []rpc.API, modules []string, cors
 	if endpoint == "" {
 		return nil
 	}
-	listener, handler, err := rpc.StartHTTPEndpoint(endpoint, apis, modules, cors, vhosts, timeouts)
+	listener, handler, err := rpc.StartHTTPEndpoint(endpoint, apis, modules, cors, vhosts, timeouts, n.config.MaxConcurrent)
 	if err != nil {
 		return err
 	}
@@ -344,7 +302,7 @@ func (n *Node) startWS(endpoint string, apis []rpc.API, modules []string, wsOrig
 	if endpoint == "" {
 		return nil
 	}
-	listener, handler, err := rpc.StartWSEndpoint(endpoint, apis, modules, wsOrigins, exposeAll)
+	listener, handler, err := rpc.StartWSEndpoint(endpoint, apis, modules, wsOrigins, exposeAll, n.config.MaxConcurrent)
 	if err != nil {
 		return err
 	}

@@ -42,11 +42,12 @@ const (
 )
 
 // NewServer will create a new server instance with no registered handlers.
-func NewServer() *Server {
+func NewServer(maxConcurrent int) *Server {
 	server := &Server{
-		services: make(serviceRegistry),
-		codecs:   mapset.NewSet(),
-		run:      1,
+		services:          make(serviceRegistry),
+		codecs:            mapset.NewSet(),
+		run:               1,
+		concurrentControl: make(chan struct{}, maxConcurrent),
 	}
 
 	// register a default service which will provide meta information about the RPC service such as the services and
@@ -322,6 +323,14 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 	return codec.CreateResponse(req.id, reply[0].Interface()), nil
 }
 
+// concurrentControlHandle control the number of concurrent processes handled by rpc.
+func (s *Server) concurrentControlHandle(ctx context.Context, codec ServerCodec, req *serverRequest) (interface{}, func()) {
+	s.concurrentControl <- struct{}{}
+	response, callback := s.handle(ctx, codec, req)
+	<-s.concurrentControl
+	return response, callback
+}
+
 // exec executes the given request and writes the result back using the codec.
 func (s *Server) exec(ctx context.Context, codec ServerCodec, req *serverRequest) {
 	var response interface{}
@@ -329,7 +338,7 @@ func (s *Server) exec(ctx context.Context, codec ServerCodec, req *serverRequest
 	if req.err != nil {
 		response = codec.CreateErrorResponse(&req.id, req.err)
 	} else {
-		response, callback = s.handle(ctx, codec, req)
+		response, callback = s.concurrentControlHandle(ctx, codec, req)
 	}
 
 	if err := codec.Write(response); err != nil {
@@ -353,7 +362,7 @@ func (s *Server) execBatch(ctx context.Context, codec ServerCodec, requests []*s
 			responses[i] = codec.CreateErrorResponse(&req.id, req.err)
 		} else {
 			var callback func()
-			if responses[i], callback = s.handle(ctx, codec, req); callback != nil {
+			if responses[i], callback = s.concurrentControlHandle(ctx, codec, req); callback != nil {
 				callbacks = append(callbacks, callback)
 			}
 		}
