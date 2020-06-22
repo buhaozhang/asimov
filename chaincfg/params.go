@@ -172,6 +172,8 @@ var MainNetParams = Params{
 	// Chain parameters
 	GenesisHash:       &mainnetGenesisHash,
 	GenesisCandidates: []common.Address{
+		common.HexToAddress("0x66e0b010b4052f68bbee5a065d029b09b3c0b13ffb"),
+		common.HexToAddress("0x6645673025c64c1337eea4995eebfe34a3da8dcf87"),
 		common.HexToAddress("0x66f29f0fd5008c9b676a32744839d9953d07e2bfc6"),
 		common.HexToAddress("0x66347c825835a984374d16bddbf674cfb6645e7bc1"),
 		common.HexToAddress("0x663cb5d3ec78b7e37a218f7ee50c84118e59e46a76"),
