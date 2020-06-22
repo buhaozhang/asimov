@@ -99,7 +99,7 @@ func TestCreateCoinbaseTx(t *testing.T) {
 
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
-		_, _, err := CreateCoinbaseTx(&chaincfg.DevelopNetParams, test.height, test.validater, nil)
+		_, _, err := CreateCoinbaseTx(&chaincfg.MainNetParams, test.height, test.validater, nil)
 		if test.wantErr != (err != nil) {
 			t.Errorf("tests #%d error %v", i, err)
 		}
@@ -112,7 +112,7 @@ func TestNewBlockTemplate(t *testing.T) {
 		TxConnectTimeOut: chaincfg.DefaultTxConnectTimeOut,
 		UtxoValidateTimeOut: chaincfg.DefaultUtxoValidateTimeOut,
 	}
-	chain, teardownFunc, err := newFakeChain(&chaincfg.DevelopNetParams)
+	chain, teardownFunc, err := newFakeChain(&chaincfg.MainNetParams)
 	if err != nil {
 		t.Error("newFakeChain error: ", err)
 		return
@@ -345,22 +345,22 @@ func TestNewBlockTemplate(t *testing.T) {
 			account, 160000000, 160000000, 1, 0, TxDescList{},
 			[]*common.Hash{},
 			make(map[protos.Asset]int64),
-			[]int64{1}, 120, false,
+			[]int64{1}, 720, false,
 		}, {
 			account, 160000000, 160000000, 1, 0, fakeTxs[0:1],
 			[]*common.Hash{fakeTxs[0].Tx.Hash()},
 			getFees(1e4),
-			[]int64{1, 1}, 120, false,
+			[]int64{1, 1}, 720, false,
 		}, {
 			account, 160000000, 160000000, 1, 0, fakeTxs[1:7],
 			[]*common.Hash{fakeTxs[5].Tx.Hash(), fakeTxs[6].Tx.Hash(), fakeTxs[4].Tx.Hash(), fakeTxs[3].Tx.Hash(), fakeTxs[2].Tx.Hash(), fakeTxs[1].Tx.Hash()},
 			getFees(1 + 1 + 1e12 + 1e4 + 1 + 1e4 + 3),
-			[]int64{1, 6, 1, 5, 1, 1, 1}, 120, false,
+			[]int64{1, 6, 1, 5, 1, 1, 1}, 720, false,
 		}, {
 			account, 160000000, 160000000, 1, 0, invalidFakeTxs,
 			[]*common.Hash{},
 			make(map[protos.Asset]int64),
-			[]int64{1}, 120, false,
+			[]int64{1}, 720, false,
 		}, {
 			keys[0], 160000000, 160000000, 1, 0, TxDescList{},
 			[]*common.Hash{},

@@ -21,7 +21,7 @@ type ChainContext interface {
 	CalculateBalance(view *txo.UtxoViewpoint, block *asiutil.Block, address common.Address, assets *protos.Asset, voucherId int64) (int64, error)
 	GetVmConfig() *fvm.Config
 	GetTemplateWarehouseInfo() (common.Address, string)
-	GetSystemContractInfo(delegateAddr common.ContractCode) (common.Address, []byte, string)
+	GetSystemContractInfo(delegateAddr common.Address) (common.Address, []byte, string)
 	GetTemplateInfo(contractAddr []byte, gas uint64, block *asiutil.Block, stateDB fvm.StateDB, chainConfig *params.ChainConfig)(uint16, string, uint64)
 	FetchTemplate(view *txo.UtxoViewpoint, hash *common.Hash) (uint16, []byte, []byte, []byte, []byte, error)
 	BlockHashByHeight(int32) (*common.Hash, error)

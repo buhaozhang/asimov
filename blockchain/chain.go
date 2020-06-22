@@ -699,8 +699,8 @@ func (b *BlockChain) connectBlock(node *blockNode, block *asiutil.Block,
 		return err
 	}
 
-	log.Infof("connectBlock success: height=%d, round=%d, slot=%d, hash=%s, stateRoot=%s",
-		node.height, node.round.Round, node.slot, node.hash.String(), node.stateRoot.String())
+	log.Infof("connectBlock success: height=%d, round=%d, slot=%d, weight=%d, hash=%s, stateRoot=%s",
+		node.height, node.round.Round, node.slot, node.weight, node.hash.String(), node.stateRoot.String())
 
 	// Prune fully spent entries and mark all entries in the view unmodified
 	// now that the modifications have been committed to the database.
@@ -841,8 +841,8 @@ func (b *BlockChain) disconnectBlock(node *blockNode, block *asiutil.Block, view
 		return err
 	}
 
-	log.Infof("disconnectBlock success: height=%d,round=%d,slot=%d,hash=%s,stateRoot=%s",
-		node.height, node.round.Round, node.slot, node.hash.String(), node.stateRoot.String())
+	log.Infof("disconnectBlock success: height=%d,round=%d,slot=%d,weight=%d,hash=%s,stateRoot=%s",
+		node.height, node.round.Round, node.slot, node.weight, node.hash.String(), node.stateRoot.String())
 	// Prune fully spent entries and mark all entries in the view unmodified
 	// now that the modifications have been committed to the database.
 	view.Commit()

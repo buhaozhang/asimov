@@ -52,7 +52,7 @@ type ContractManager interface {
 	Init(chain fvm.ChainContext, genesisCoinbaseData[] byte) error
 
 	// Get latest contract by height.
-	GetActiveContractByHeight(height int32, contractAddr common.ContractCode) *chaincfg.ContractInfo
+	GetActiveContractByHeight(height int32, contractAddr common.Address) *chaincfg.ContractInfo
 
 	GetContractAddressByAsset(
 		gas uint64,
@@ -92,7 +92,7 @@ type ContractManager interface {
 
 	// Get signed up validators
 	GetSignedUpValidators(
-		consensus common.ContractCode,
+		consensus common.Address,
 		block *asiutil.Block,
 		stateDB vm.StateDB,
 		chainConfig *params.ChainConfig,

@@ -53,7 +53,7 @@ type (
 	// Unpack function results
 	UnPackFunctionResultFunc func(abiStr string, v interface{}, funcName string, output []byte) error
 	// Get system contract information
-	GetSystemContractInfoFunc func(delegateAddr common.ContractCode) (common.Address, []byte, string)
+	GetSystemContractInfoFunc func(delegateAddr common.Address) (common.Address, []byte, string)
 	// Fetch a given template from template warehouse
 	FetchTemplateFunc func(view *txo.UtxoViewpoint, hash *common.Hash) (uint16, []byte, []byte, []byte, []byte, error)
 	// Get vote value
@@ -63,9 +63,7 @@ type (
 // run runs the given contract and takes care of running precompiles with a fallback to the byte code interpreter.
 func run(fvm *FVM, contract *Contract, input []byte, readOnly bool) ([]byte, error) {
 	if contract.CodeAddr != nil {
-		precompiles := PrecompiledContractsHomestead
-
-		if p := precompiles[*contract.CodeAddr]; p != nil {
+		if p := GetPreCompiledContract(*contract.CodeAddr); p != nil {
 			return RunPrecompiledContract(fvm, p, input, contract)
 		}
 	}
@@ -222,8 +220,7 @@ func (fvm *FVM) Call(caller ContractRef, addr common.Address, input []byte,
 	var to = AccountRef(addr)
 	snapshot = fvm.StateDB.Snapshot()
 	if !fvm.StateDB.Exist(addr) {
-		precompiles := PrecompiledContractsHomestead
-		if precompiles[addr] == nil && value.Sign() == 0 {
+		if GetPreCompiledContract(addr) == nil && value.Sign() == 0 {
 			// Calling a non existing account, don't do anything, but ping the tracer
 			if fvm.vmConfig.Debug && fvm.depth == 0 {
 				fvm.vmConfig.Tracer.CaptureStart(caller.Address(), addr, false, input, leftOverGas, value)

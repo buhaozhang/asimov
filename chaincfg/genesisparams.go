@@ -68,6 +68,28 @@ var (
 				common.HexToAddress("0x66a8c1def9e07589415ebf59b55f76b9d5115064c9"),
 			},
 		},
+		common.MainNet.String(): {
+			// GenesisOrganization
+			"genesisCitizens": {
+				common.HexToAddress("0x665ed50a57537b53757f77455a14f0ca561e97ccf0"),
+				common.HexToAddress("0x665c1eba3c28f0040e8f50f0855d1f259654b89a53"),
+				common.HexToAddress("0x66289ac97751f4e9b46061311eb17ebbd406a47479"),
+				common.HexToAddress("0x6605ae9e08413ba416cd34b9a77161555257915a70"),
+				common.HexToAddress("0x66f53528a1cae2650451a00a5643157ac0d7164461"),
+				common.HexToAddress("0x66e0b010b4052f68bbee5a065d029b09b3c0b13ffb"),
+				common.HexToAddress("0x6645673025c64c1337eea4995eebfe34a3da8dcf87"),
+			},
+			// ValidatorCommittee
+			"_validators": {
+				common.HexToAddress("0x665ed50a57537b53757f77455a14f0ca561e97ccf0"),
+				common.HexToAddress("0x665c1eba3c28f0040e8f50f0855d1f259654b89a53"),
+				common.HexToAddress("0x66289ac97751f4e9b46061311eb17ebbd406a47479"),
+				common.HexToAddress("0x6605ae9e08413ba416cd34b9a77161555257915a70"),
+				common.HexToAddress("0x66f53528a1cae2650451a00a5643157ac0d7164461"),
+				common.HexToAddress("0x66e0b010b4052f68bbee5a065d029b09b3c0b13ffb"),
+				common.HexToAddress("0x6645673025c64c1337eea4995eebfe34a3da8dcf87"),
+			},
+		},
 	}
 )
 
@@ -88,8 +110,8 @@ type ContractInfo struct {
 }
 
 // Decode a bytes array into a map, it is only used for genesis block's data.
-func TransferGenesisData(data []byte) map[common.ContractCode][]ContractInfo {
-	var cMap map[common.ContractCode][]ContractInfo
+func TransferGenesisData(data []byte) map[string][]ContractInfo {
+	var cMap map[string][]ContractInfo
 	err := json.Unmarshal(data, &cMap)
 	if err != nil {
 		panic(err)

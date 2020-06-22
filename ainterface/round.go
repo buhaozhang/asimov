@@ -33,7 +33,7 @@ type IRoundManager interface {
     // let the manager run
     Start()
     Halt()
-    GetContract() common.ContractCode
+    GetContract() common.Address
 
     GetHsMappingByRound(round uint32) (map[string]*ValidatorInfo, error)
 

@@ -7,7 +7,6 @@ package indexers
 import (
 	"bytes"
 	"fmt"
-	"github.com/AsimovNetwork/asimov/blockchain"
 	"github.com/AsimovNetwork/asimov/blockchain/mock"
 	"github.com/AsimovNetwork/asimov/common"
 	"github.com/AsimovNetwork/asimov/database"
@@ -16,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/AsimovNetwork/asimov/protos"
+	"github.com/AsimovNetwork/asimov/blockchain/txo"
 )
 
 // addrIndexBucket provides a mock address index database bucket by implementing
@@ -289,7 +289,7 @@ func TestConnectBlock(t *testing.T)  {
 
 	addrIndex := NewAddrIndex(nil)
 
-	stxo := make([]blockchain.SpentTxOut, 0)
+	stxo := make([]txo.SpentTxOut, 0)
 	pblock := protos.MsgBlock{}
 	pblock.Header.Height = 101
 
@@ -368,19 +368,19 @@ func TestConnectBlock(t *testing.T)  {
 		})
 		pvblock.AddTransaction(msgtx0)
 
-		stxo = append(stxo, blockchain.SpentTxOut{
+		stxo = append(stxo, txo.SpentTxOut{
 			Amount:   100,
 			Height:   11,
 			Asset:    &asiutil.AsimovAsset,
 			PkScript: pkscript0,
 		})
-		stxo = append(stxo, blockchain.SpentTxOut{
+		stxo = append(stxo, txo.SpentTxOut{
 			Amount:   200,
 			Height:   22,
 			Asset:    &asiutil.AsimovAsset,
 			PkScript: pkscript2,
 		})
-		stxo = append(stxo, blockchain.SpentTxOut{
+		stxo = append(stxo, txo.SpentTxOut{
 			Amount:   300,
 			Height:   33,
 			Asset:    &asiutil.AsimovAsset,

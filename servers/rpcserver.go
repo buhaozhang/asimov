@@ -184,6 +184,7 @@ func (s *PublicRpcAPI) GetBlock(blockHash string, verbose bool, verboseTx bool) 
 		Slot:          blockHeader.SlotIndex,
 		GasLimit:      blockHeader.GasLimit,
 		GasUsed:       blockHeader.GasUsed,
+		Weight:        blockHeader.Weight,
 		Confirmations: int64(1 + best.Height - blockHeight),
 		Height:        int64(blockHeight),
 		Size:          int32(len(blkBytes)),
@@ -458,6 +459,7 @@ func (s *PublicRpcAPI) GetBlockListByHeight(offset int32, count int32) (interfac
 			TxCount:       uint64(len(block.MsgBlock().Transactions)),
 			Round:         header.Round,
 			Slot:          header.SlotIndex,
+			Weight:        header.Weight,
 			RawTx:         rawTxns,
 			Vtxs:          vtxRawTxns,
 			Receipts:      receiptResult,
@@ -941,7 +943,7 @@ func (s *PublicRpcAPI) DecodeScript(hexScript string) (interface{}, error) {
 
 // Get system contract ABI information on a given block height.
 // Note the term system contract and genesis contract are interchangeable in this context.
-func (s *PublicRpcAPI) GetGenesisContractByHeight(height int32, contractAddr common.ContractCode) (interface{}, error) {
+func (s *PublicRpcAPI) GetGenesisContractByHeight(height int32, contractAddr common.Address) (interface{}, error) {
 	var result = struct {
 		Exist bool   `json:"exist"`
 		ABI   string `json:"abi"`
@@ -960,7 +962,7 @@ func (s *PublicRpcAPI) GetGenesisContractByHeight(height int32, contractAddr com
 }
 
 // Get system contract ABI information on latest block height.
-func (s *PublicRpcAPI) GetGenesisContract(contractAddr common.ContractCode) (interface{}, error) {
+func (s *PublicRpcAPI) GetGenesisContract(contractAddr common.Address) (interface{}, error) {
 	blockHeight := s.cfg.Chain.BestSnapshot().Height
 	contract := s.cfg.ContractMgr.GetActiveContractByHeight(blockHeight, contractAddr)
 	if contract == nil {
@@ -971,16 +973,11 @@ func (s *PublicRpcAPI) GetGenesisContract(contractAddr common.ContractCode) (int
 		Address    string `json:"address"`
 		Code       string `json:"code"`
 		AbiInfo    string `json:"abiInfo"`
-		AddressHex string `json:"addressHex"`
 	}{
-		Address:    "",
+		Address:    contractAddr.String(),
 		Code:       contract.Code,
 		AbiInfo:    contract.AbiInfo,
-		AddressHex: "",
 	}
-
-	result.Address = string(contractAddr)
-	result.AddressHex = string(contractAddr)
 
 	return result, nil
 }

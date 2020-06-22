@@ -1625,8 +1625,7 @@ func (b *BlockChain) checkCoinbaseTx(prenode *blockNode, block *asiutil.Block, a
 
 // validate the reward of the core team in the coinbase tx.
 func checkCoreTeamReward(coinbaseTx *protos.MsgTx, mineFeelist map[protos.Asset]int64) error {
-	fundationAddr := common.HexToAddress(string(common.GenesisOrganization))
-	pkScript, _ := txscript.PayToAddrScript(&fundationAddr)
+	pkScript, _ := txscript.PayToAddrScript(&common.GenesisOrganization)
 	coreTeamReward := make(map[protos.Asset]int64)
 	for _, txout := range coinbaseTx.TxOut {
 		if bytes.Equal(pkScript, txout.PkScript) {

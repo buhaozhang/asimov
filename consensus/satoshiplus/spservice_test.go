@@ -13,7 +13,7 @@ import (
 
 func TestSlotControl(t *testing.T) {
 	privString := "0x224828e95689e30a8e668418f968260edc6aa78ae03eed607f49288d99123c25"
-	netParam := chaincfg.DevelopNetParams
+	netParam := chaincfg.MainNetParams
 	netParam.GenesisCandidates = []common.Address{
 		{0x66, 0xe3, 0x05, 0x4b, 0x41, 0x10, 0x51, 0xda, 0x54, 0x92, 0xae, 0xc7, 0xa8, 0x23, 0xb0, 0x0c, 0xb3, 0xad, 0xd7, 0x72, 0xd7,}, //address by privateKey0
 		{0x66, 0x3c, 0xf8, 0xb8, 0x65, 0xf2, 0xf7, 0xe5, 0x22, 0xff, 0x63, 0x90, 0x59, 0xe0, 0xa4, 0x37, 0xc8, 0x49, 0xee, 0x5a, 0xb0,}, //address by privateKey1
@@ -98,7 +98,7 @@ func TestSlotControl(t *testing.T) {
 
 func TestGenblock(t *testing.T) {
 	privString := "0x224828e95689e30a8e668418f968260edc6aa78ae03eed607f49288d99123c25"
-	netParam := chaincfg.DevelopNetParams
+	netParam := chaincfg.MainNetParams
 	netParam.GenesisCandidates = []common.Address{
 		{0x66, 0xe3, 0x05, 0x4b, 0x41, 0x10, 0x51, 0xda, 0x54, 0x92, 0xae, 0xc7, 0xa8, 0x23, 0xb0, 0x0c, 0xb3, 0xad, 0xd7, 0x72, 0xd7,}, //address by privateKey0
 		{0x66, 0x3c, 0xf8, 0xb8, 0x65, 0xf2, 0xf7, 0xe5, 0x22, 0xff, 0x63, 0x90, 0x59, 0xe0, 0xa4, 0x37, 0xc8, 0x49, 0xee, 0x5a, 0xb0,}, //address by privateKey1
@@ -329,7 +329,7 @@ func TestGetRoundInfo(t *testing.T) {
 
 func TestGetRoundIntervalByRound(t *testing.T) {
 	privString := "0x224828e95689e30a8e668418f968260edc6aa78ae03eed607f49288d99123c25"
-	consensusConfig, teardownFunc, err := createPoaConfig(privString, &chaincfg.DevelopNetParams)
+	consensusConfig, teardownFunc, err := createPoaConfig(privString, &chaincfg.MainNetParams)
 	if err != nil {
 		t.Errorf("createPoaConfig error %v", err)
 	}
@@ -345,19 +345,19 @@ func TestGetRoundIntervalByRound(t *testing.T) {
 		wantInterval int64
 	}{
 		{
-			0, common.DefaultBlockInterval * 120,
+			0, common.DefaultBlockInterval * int64(chaincfg.ActiveNetParams.RoundSize),
 		}, {
-			1, common.DefaultBlockInterval * 120,
+			1, common.DefaultBlockInterval * int64(chaincfg.ActiveNetParams.RoundSize),
 		}, {
-			2, common.MinBlockInterval * 120,
+			2, common.MinBlockInterval * int64(chaincfg.ActiveNetParams.RoundSize),
 		}, {
-			10, 570,
+			10, common.MinBlockInterval * int64(chaincfg.ActiveNetParams.RoundSize),
 		}, {
-			30, 1170,
+			30, common.MinBlockInterval * int64(chaincfg.ActiveNetParams.RoundSize),
 		}, {
-			50, 1770,
+			50, common.MinBlockInterval * int64(chaincfg.ActiveNetParams.RoundSize),
 		}, {
-			60, common.MaxBlockInterval * 120,
+			60, common.MinBlockInterval * int64(chaincfg.ActiveNetParams.RoundSize),
 		},
 	}
 

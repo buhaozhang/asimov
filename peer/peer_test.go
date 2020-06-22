@@ -684,7 +684,7 @@ func TestOutboundPeer(t *testing.T) {
 	p1.Disconnect()
 
 	// Test regression
-	peerCfg.ChainParams = &chaincfg.DevelopNetParams
+	peerCfg.ChainParams = &chaincfg.MainNetParams
 
 	r2, w2 := io.Pipe()
 	c2 := &conn{raddr: "10.0.0.1:8333", Writer: w2, Reader: r2}

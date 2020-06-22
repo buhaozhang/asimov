@@ -59,7 +59,7 @@ func (m *RoundManager) Start() {
 func (m *RoundManager) Halt() {
 }
 
-func (m *RoundManager) GetContract() common.ContractCode {
+func (m *RoundManager) GetContract() common.Address {
 	return common.ConsensusPOA
 }
 

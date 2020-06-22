@@ -16,8 +16,6 @@ import (
 	"math/big"
 )
 
-var validatorCommitteeAddress = vm.ConvertSystemContractAddress(common.ValidatorCommittee)
-
 // GetFees returns an asset list and their valid heights
 // asset in list are used as transaction fees
 // heights describe the assets formally effective
@@ -39,7 +37,7 @@ func (m *Manager) GetFees(
 
 	runCode, err := fvm.PackFunctionArgs(contract.AbiInfo, feeListFunc)
 	result, _, err := fvm.CallReadOnlyFunction(officialAddr, block, m.chain, stateDB, chainConfig,
-		common.SystemContractReadOnlyGas, validatorCommitteeAddress, runCode)
+		common.SystemContractReadOnlyGas, common.ValidatorCommittee, runCode)
 	if err != nil {
 		log.Errorf("Get contract templates failed, error: %s", err)
 		return nil, err

@@ -761,7 +761,7 @@ func TestCheckBlockHeaderContext(t *testing.T) {
 	parivateKeyList := []string{
 		"0x224828e95689e30a8e668418f968260edc6aa78ae03eed607f49288d99123c25",  //privateKey0
 	}
-	_, _, chain, teardownFunc, err := createFakeChainByPrivateKeys(parivateKeyList, chaincfg.DevelopNetParams.RoundSize)
+	_, _, chain, teardownFunc, err := createFakeChainByPrivateKeys(parivateKeyList, chaincfg.MainNetParams.RoundSize)
 	if err != nil || chain == nil {
 		t.Errorf("create block error %v", err)
 	}
@@ -857,7 +857,7 @@ func TestCheckBlockContext(t *testing.T) {
 	parivateKeyList := []string{
 		"0x224828e95689e30a8e668418f968260edc6aa78ae03eed607f49288d99123c25",  //privateKey0
 	}
-	_, _, chain, teardownFunc, err := createFakeChainByPrivateKeys(parivateKeyList, chaincfg.DevelopNetParams.RoundSize)
+	_, _, chain, teardownFunc, err := createFakeChainByPrivateKeys(parivateKeyList, chaincfg.MainNetParams.RoundSize)
 	if err != nil || chain == nil {
 		t.Errorf("create block error %v", err)
 	}
@@ -948,7 +948,7 @@ func TestCheckSignatures(t *testing.T) {
 		"0xd07f68f78fc58e3dc8ea72ff69784aa9542c452a4ee66b2665fa3cccb48441c2",
 		"0x77366e621236e71a77236e0858cd652e92c3af0908527b5bd1542992c4d7cace",
 	}
-	_, netParam, chain, teardownFunc, err := createFakeChainByPrivateKeys(parivateKeyList, chaincfg.DevelopNetParams.RoundSize)
+	_, netParam, chain, teardownFunc, err := createFakeChainByPrivateKeys(parivateKeyList, chaincfg.MainNetParams.RoundSize)
 	if err != nil || chain == nil {
 		t.Errorf("create block error %v", err)
 	}
@@ -1064,7 +1064,7 @@ func TestCheckSignaturesWeight(t *testing.T) {
 		"0xd07f68f78fc58e3dc8ea72ff69784aa9542c452a4ee66b2665fa3cccb48441c2",  //privateKey1
 		"0x77366e621236e71a77236e0858cd652e92c3af0908527b5bd1542992c4d7cace",  //privateKey2
 	}
-	accList, netParam, chain, teardownFunc, err := createFakeChainByPrivateKeys(parivateKeyList, chaincfg.DevelopNetParams.RoundSize)
+	accList, netParam, chain, teardownFunc, err := createFakeChainByPrivateKeys(parivateKeyList, chaincfg.MainNetParams.RoundSize)
 	if err != nil || chain == nil {
 		t.Errorf("create block error %v", err)
 	}
@@ -1384,7 +1384,7 @@ func TestCheckBlockHeaderSanity(t *testing.T) {
 	parivateKeyList := []string{
 		"0xd0f0461b7b4d26cf370e6c73b58ef7fa26e8e30853a8cee901ed42cf0879cb6e",  //privateKey0
 	}
-	_, _, chain, teardownFunc, err := createFakeChainByPrivateKeys(parivateKeyList, chaincfg.DevelopNetParams.RoundSize)
+	_, _, chain, teardownFunc, err := createFakeChainByPrivateKeys(parivateKeyList, chaincfg.MainNetParams.RoundSize)
 	if err != nil || chain == nil {
 		t.Errorf("create block error %v", err)
 	}
@@ -1482,7 +1482,7 @@ func TestCheckBlockSanity(t *testing.T) {
 	parivateKeyList := []string{
 		"0xd0f0461b7b4d26cf370e6c73b58ef7fa26e8e30853a8cee901ed42cf0879cb6e",  //privateKey0
 	}
-	_, _, chain, teardownFunc, err := createFakeChainByPrivateKeys(parivateKeyList, chaincfg.DevelopNetParams.RoundSize)
+	_, _, chain, teardownFunc, err := createFakeChainByPrivateKeys(parivateKeyList, chaincfg.MainNetParams.RoundSize)
 	if err != nil || chain == nil {
 		t.Errorf("create block error %v", err)
 	}
@@ -1937,7 +1937,7 @@ func createErrorOpcodeTx(
 
 func TestCheckTransactionInputs(t *testing.T) {
 	privString := "0xd0f0461b7b4d26cf370e6c73b58ef7fa26e8e30853a8cee901ed42cf0879cb6e"
-	chain, teardownFunc, err := newFakeChain(&chaincfg.DevelopNetParams)
+	chain, teardownFunc, err := newFakeChain(&chaincfg.MainNetParams)
 	if err != nil ||chain == nil {
 		t.Errorf("newFakeChain error %v", err)
 	}

@@ -125,8 +125,9 @@ func (m *RoundManager) GetValidators(blockHash common.Hash, round uint32, fn ain
 				continue
 			}
 			if filters[i] > 0 {
-				candidates[sv] = miners[mineraddrs[i]]
-				totalWeight += candidates[sv]
+				w := miners[mineraddrs[i]]
+				candidates[sv] += w
+				totalWeight += w
 			}
 		}
 	}
@@ -338,7 +339,7 @@ func (m *RoundManager) Halt() {
 }
 
 // return unique contract code which represents some consensus
-func (m *RoundManager) GetContract() common.ContractCode {
+func (m *RoundManager) GetContract() common.Address {
 	return common.ConsensusSatoshiPlus
 }
 

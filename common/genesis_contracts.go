@@ -2,34 +2,14 @@
 
 package common
 
-// ContractCode identifies a kind of genesis contract.
-type ContractCode string
-
-const (
-	ConsensusPOA ContractCode = "0x63000000000000000000000000000000000000006c"
-	ConsensusSatoshiPlus ContractCode = "0x63000000000000000000000000000000000000006a"
-	GenesisOrganization ContractCode = "0x630000000000000000000000000000000000000064"
-	RegistryCenter ContractCode = "0x630000000000000000000000000000000000000065"
-	TemplateWarehouse ContractCode = "0x630000000000000000000000000000000000000067"
-	ValidatorCommittee ContractCode = "0x63000000000000000000000000000000000000006b"
-)
-
 // Map of ContractCode values back to their constant names for pretty printing.
-var ContractCodeStrings = map[ContractCode]string{
+var ContractCodeStrings = map[Address]string{
 	ConsensusPOA : "ConsensusPOA",
 	ConsensusSatoshiPlus : "ConsensusSatoshiPlus",
 	GenesisOrganization : "GenesisOrganization",
 	RegistryCenter : "RegistryCenter",
 	TemplateWarehouse : "TemplateWarehouse",
 	ValidatorCommittee : "ValidatorCommittee",
-}
-
-// String returns the ErrorCode as a human-readable name.
-func (c ContractCode) String() string {
-	if s := ContractCodeStrings[c]; s != "" {
-		return s
-	}
-	return "Unknown ContractCode " + string(c)
 }
 
 

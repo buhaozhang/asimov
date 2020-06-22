@@ -361,7 +361,7 @@ func (g *BlkTmplGenerator) ProduceNewBlock(account *crypto.Account, gasFloor, ga
 	round uint32, slotIndex uint16, blockInterval float64) (
 	blockTemplate *BlockTemplate, err error) {
 
-	produceBlockTimeInterval := g.policy.BlockProductedTimeOut * blockInterval
+	produceBlockTimeInterval := g.policy.BlockProductedTimeOut * (blockInterval - g.policy.BlockSyncTime)
 	utxoValidateTimeInterval := g.policy.UtxoValidateTimeOut * produceBlockTimeInterval
 	produceTxTimeInterval := (g.policy.UtxoValidateTimeOut + g.policy.TxConnectTimeOut) * produceBlockTimeInterval
 
@@ -782,8 +782,7 @@ priorityQueueLoop:
 
 	// reward for core team
 	if coreTeamRewardFlag {
-		fundationAddr := common.HexToAddress(string(common.GenesisOrganization))
-		pkScript, _ := txscript.PayToAddrScript(&fundationAddr)
+		pkScript, _ := txscript.PayToAddrScript(&common.GenesisOrganization)
 		txoutLen := len(coinbaseTx.MsgTx().TxOut)
 		for i := 0; i < txoutLen; i++ {
 			value := coinbaseTx.MsgTx().TxOut[i].Value

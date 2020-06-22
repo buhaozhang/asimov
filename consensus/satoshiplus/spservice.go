@@ -54,7 +54,9 @@ func NewSatoshiPlusService(config *params.Config) (*SPService, error) {
 		},
 	}
 
-	config.Chain.Subscribe(service.handleBlockchainNotification)
+	if !chaincfg.Cfg.DisableBlockEarly {
+		config.Chain.Subscribe(service.handleBlockchainNotification)
+	}
 	return service, nil
 }
 
@@ -313,18 +315,17 @@ func (s *SPService) resetTimer(slot int64) time.Duration {
 // handleBlockchainNotification handles notifications from blockchain.  It does
 // things such as generate block ahead of time.
 func (s *SPService) handleBlockchainNotification(notification *blockchain.Notification) {
-	switch notification.Type {
-	// A block has been connected to the main block chain.
-	case blockchain.NTBlockConnected:
+	if notification.Type == blockchain.NTBlockConnected {
+		// A block has been connected to the main block chain.
 		dataList, ok := notification.Data.([]interface{})
 		if !ok || len(dataList) < 3 {
 			log.Warnf("Chain notification need a block node.")
-			break
+			return
 		}
 		node, ok := dataList[2].(ainterface.BlockNode)
 		if !ok {
 			log.Warnf("Chain notification need a block node at the second position.")
-			break
+			return
 		}
 		if node.Height() <= s.topHeight {
 			return
