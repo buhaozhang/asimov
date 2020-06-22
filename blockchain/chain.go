@@ -2250,7 +2250,8 @@ func (b *BlockChain) isCurrent() bool {
 	// Not current if the latest main (best) chain height is before the
 	// latest known good checkpoint (when checkpoints are enabled).
 	checkpoint := b.LatestCheckpoint()
-	if checkpoint != nil && b.bestChain.Tip().height < checkpoint.Height {
+	tip := b.bestChain.Tip()
+	if checkpoint != nil && tip.height < checkpoint.Height {
 		return false
 	}
 
@@ -2264,7 +2265,10 @@ func (b *BlockChain) isCurrent() bool {
 	// The chain appears to be current if none of the checks reported
 	// otherwise.
 	minusHour := b.timeSource.AdjustedTime() - int64(time.Hour/time.Second)
-	return b.bestChain.Tip().timestamp >= minusHour
+	if tip.height == 0 {
+		return chaincfg.ActiveNetParams.ChainStartTime >= minusHour
+	}
+	return tip.timestamp >= minusHour
 }
 
 // IsCurrent returns whether or not the chain believes it is current.  Several
