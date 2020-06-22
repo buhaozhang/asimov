@@ -46,11 +46,11 @@ const (
 
 	// maxStallDuration is the time after which we will disconnect our
 	// current sync peer if we haven't made progress.
-	maxStallDuration = 3 * time.Minute
+	maxStallDuration = 30 * time.Second
 
 	// stallSampleInterval the interval at which we will check to see if our
 	// sync has stalled.
-	stallSampleInterval = 30 * time.Second
+	stallSampleInterval = 5 * time.Second
 
 	maxRejectedSigns = 1000
 
@@ -190,6 +190,7 @@ type SyncManager struct {
 	chainParams    *chaincfg.Params
 	progressLogger *blockProgressLogger
 	msgChan        chan interface{}
+	lowMsgChan     chan interface{}
 	wg             sync.WaitGroup
 	quit           chan struct{}
 
@@ -552,7 +553,7 @@ func (sm *SyncManager) acceptTx() {
 				acceptedTxs, err := sm.txMemPool.ProcessTransaction(tmsg.tx,
 					true, true, mempool.Tag(tmsg.peer.ID()))
 
-				sm.msgChan <- &acceptedTxMsg{
+				sm.lowMsgChan <- &acceptedTxMsg{
 					acceptedTxs: acceptedTxs,
 					err:         err,
 					tmsg:        tmsg,
@@ -1169,24 +1170,26 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 		}
 	}
 
+	current := sm.current()
+
 	// If this inv contains a block announcement, and this isn't coming from
 	// our current sync peer or we're current, then update the last
 	// announced block for this peer. We'll use this information later to
 	// update the heights of peers based on blocks we've accepted that they
 	// previously announced.
-	if lastBlock != -1 && (peer != sm.syncPeer || sm.current()) {
+	if lastBlock != -1 && (peer != sm.syncPeer || current) {
 		peer.UpdateLastAnnouncedBlock(&invVects[lastBlock].Hash)
 	}
 
 	// Ignore invs from peers that aren't the sync if we are not current.
 	// Helps prevent fetching a mass of orphans.
-	if peer != sm.syncPeer && !sm.current() {
+	if peer != sm.syncPeer && !current {
 		return
 	}
 
 	// If our chain is current and a peer announces a block we already
 	// know of, then update their current block height.
-	if lastBlock != -1 && sm.current() {
+	if lastBlock != -1 && current {
 		blkHeight, err := sm.chain.BlockHeightByHash(&invVects[lastBlock].Hash)
 		if err == nil {
 			peer.UpdateLastBlockHeight(blkHeight)
@@ -1240,14 +1243,19 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 			continue
 		}
 		if !haveInv {
-			if iv.Type == protos.InvTypeTx {
+			switch iv.Type {
+			case protos.InvTypeTx:
 				// Skip the transaction if it has already been
 				// rejected.
 				if _, exists := sm.rejectedTxns[iv.Hash]; exists {
 					continue
 				}
+				fallthrough
+			case protos.InvTypeSignature:
+				if !current {
+					continue
+				}
 			}
-
 			// Add it to the request queue.
 			state.requestQueue = append(state.requestQueue, iv)
 			continue
@@ -1379,81 +1387,84 @@ func (sm *SyncManager) limitMap(m map[common.Hash]struct{}, limit int) {
 func (sm *SyncManager) blockHandler() {
 	stallTicker := time.NewTicker(stallSampleInterval)
 	defer stallTicker.Stop()
+
+	handleHighMsg :=func(m interface{}){
+		switch msg := m.(type) {
+		case *processBlockMsg:
+			log.Debugf("processBlockMsg: Process block")
+			_, isOrphan, err := sm.chain.ProcessBlock(
+				msg.block, msg.vblock, msg.Receipts, msg.Logs, msg.flags)
+			log.Debugf("process result %v", err)
+			if err != nil {
+				msg.reply <- processBlockResponse{
+					isOrphan: false,
+					err:      err,
+				}
+			}
+
+			msg.reply <- processBlockResponse{
+				isOrphan: isOrphan,
+				err:      nil,
+			}
+		case *newPeerMsg:
+			sm.handleNewPeerMsg(msg.peer)
+		case *blockMsg:
+			sm.handleBlockMsg(msg)
+		case *donePeerMsg:
+			sm.handleDonePeerMsg(msg.peer)
+		case *invMsg:
+			sm.handleInvMsg(msg)
+		case *sigMsg:
+			sm.handleSigMsg(msg)
+			msg.reply <- struct{}{}
+		case *headersMsg:
+			sm.handleHeadersMsg(msg)
+		case getSyncPeerMsg:
+			var peerID int32
+			if sm.syncPeer != nil {
+				peerID = sm.syncPeer.ID()
+			}
+			msg.reply <- peerID
+		case isCurrentMsg:
+			if msg.checkAccept {
+				msg.reply <- sm.checkCurrent(true)
+			} else {
+				msg.reply <- sm.current()
+			}
+		case pauseMsg:
+			// Wait until the sender unpauses the manager.
+			<-msg.unpause
+		}
+	}
 out:
 	for {
 		select {
 		case m := <-sm.msgChan:
-			switch msg := m.(type) {
-			case *newPeerMsg:
-				sm.handleNewPeerMsg(msg.peer)
-
-			case *txMsg:
-				sm.handleTxMsg(msg)
-				msg.reply <- struct{}{}
-
-			case *sigMsg:
-				sm.handleSigMsg(msg)
-				msg.reply <- struct{}{}
-
-			case *blockMsg:
-				sm.handleBlockMsg(msg)
-				msg.reply <- struct{}{}
-
-			case *invMsg:
-				sm.handleInvMsg(msg)
-
-			case *headersMsg:
-				sm.handleHeadersMsg(msg)
-
-			case *donePeerMsg:
-				sm.handleDonePeerMsg(msg.peer)
-
-			case getSyncPeerMsg:
-				var peerID int32
-				if sm.syncPeer != nil {
-					peerID = sm.syncPeer.ID()
-				}
-				msg.reply <- peerID
-
-			case processBlockMsg:
-				log.Debugf("processBlockMsg: Process block")
-				_, isOrphan, err := sm.chain.ProcessBlock(
-					msg.block, msg.vblock, msg.Receipts, msg.Logs, msg.flags)
-				log.Debugf("process result %v", err)
-				if err != nil {
-					msg.reply <- processBlockResponse{
-						isOrphan: false,
-						err:      err,
-					}
-				}
-
-				msg.reply <- processBlockResponse{
-					isOrphan: isOrphan,
-					err:      nil,
-				}
-
-			case isCurrentMsg:
-				if msg.checkAccept {
-					msg.reply <- sm.checkCurrent(true)
-				} else {
-					msg.reply <- sm.current()
-				}
-
-			case pauseMsg:
-				// Wait until the sender unpauses the manager.
-				<-msg.unpause
-
-			case *acceptedTxMsg:
-				sm.handleAcceptedTxMsg(msg)
-
-			default:
-				log.Warnf("Invalid message type in block "+
-					"handler: %T", msg)
-			}
+			handleHighMsg(m)
 		case <-stallTicker.C:
 			sm.handleStallSample()
 		case <-sm.quit:
 			break out
+		default:
+			select {
+			case m := <-sm.msgChan:
+				handleHighMsg(m)
+			case <-stallTicker.C:
+				sm.handleStallSample()
+			case <-sm.quit:
+				break out
+			case m := <-sm.lowMsgChan:
+				switch msg := m.(type) {
+				case *txMsg:
+					sm.handleTxMsg(msg)
+					msg.reply <- struct{}{}
+				case *acceptedTxMsg:
+					sm.handleAcceptedTxMsg(msg)
+				default:
+					log.Warnf("Invalid message type in block "+
+						"handler: %T", msg)
+				}
+			}
 		}
 	}
 
@@ -1597,7 +1608,7 @@ func (sm *SyncManager) QueueTx(tx *asiutil.Tx, peer *peerpkg.Peer, done chan str
 		return
 	}
 
-	sm.msgChan <- &txMsg{tx: tx, peer: peer, reply: done}
+	sm.lowMsgChan <- &txMsg{tx: tx, peer: peer, reply: done}
 }
 
 func (sm *SyncManager) QueueSig(sig *asiutil.BlockSign, peer *peerpkg.Peer, done chan struct{}) {
@@ -1743,7 +1754,8 @@ func New(config *Config) (*SyncManager, error) {
 		requestedBlocks:  make(map[common.Hash]struct{}),
 		peerStates:       make(map[*peerpkg.Peer]*peerSyncState),
 		progressLogger:   newBlockProgressLogger("Processed", log),
-		msgChan:          make(chan interface{}, config.MaxPeers*3),
+		msgChan:          make(chan interface{}, config.MaxPeers*5),
+		lowMsgChan:       make(chan interface{}, config.MaxPeers*5),
 		headerList:       list.New(),
 		quit:             make(chan struct{}),
 		signedHeight:     make(map[int32]interface{}),
