@@ -1390,7 +1390,7 @@ func (sm *SyncManager) blockHandler() {
 
 	handleHighMsg :=func(m interface{}){
 		switch msg := m.(type) {
-		case *processBlockMsg:
+		case processBlockMsg:
 			log.Debugf("processBlockMsg: Process block")
 			_, isOrphan, err := sm.chain.ProcessBlock(
 				msg.block, msg.vblock, msg.Receipts, msg.Logs, msg.flags)
@@ -1410,6 +1410,7 @@ func (sm *SyncManager) blockHandler() {
 			sm.handleNewPeerMsg(msg.peer)
 		case *blockMsg:
 			sm.handleBlockMsg(msg)
+			msg.reply <- struct{}{}
 		case *donePeerMsg:
 			sm.handleDonePeerMsg(msg.peer)
 		case *invMsg:
