@@ -110,6 +110,13 @@ type updatePeerHeightsMsg struct {
 	originPeer *peer.Peer
 }
 
+// newPeerMsg is a message sent from the inhanndle to the NodeServer
+// after a new peer version ack replied.
+type newPeerMsg struct {
+	sp    *serverPeer
+	reply chan bool
+}
+
 // peerState maintains state of inbound, persistent, outbound peers as well
 // as banned peers and outbound groups.
 type peerState struct {
@@ -176,7 +183,7 @@ type NodeServer struct {
 	consensus            ainterface.Consensus
 	cfg                  *params.Config
 	modifyRebroadcastInv chan interface{}
-	newPeers             chan *serverPeer
+	newPeers             chan newPeerMsg
 	donePeers            chan *serverPeer
 	banPeers             chan *serverPeer
 	query                chan interface{}
@@ -375,7 +382,47 @@ func (sp *serverPeer) OnVersion(_ *peer.Peer, msg *protos.MsgVersion) *protos.Ms
 // OnVerAck is invoked when a peer receives a verack bitcoin message and is used
 // to kick start communication with them.
 func (sp *serverPeer) OnVerAck(_ *peer.Peer, _ *protos.MsgVerAck) {
-	sp.server.AddPeer(sp)
+	s:= sp.server
+	if s.AddPeer(sp) {
+		// Update the address' last seen time if the peer has acknowledged
+		// our version and has sent us its version as well.
+		if sp.VerAckReceived() && sp.VersionKnown() && sp.NA() != nil {
+			s.addrManager.Connected(sp.NA())
+		}
+
+		// Signal the sync manager this peer is a new sync candidate.
+		s.syncManager.NewPeer(sp.Peer)
+
+		// Update the address manager and request known addresses from the
+		// remote peer for outbound connections. This is skipped when running on
+		// the simulation test network since it is only intended to connect to
+		// specified peers and actively avoids advertising and connecting to
+		// discovered peers.
+		if !sp.Inbound() {
+			// Advertise the local address when the server accepts incoming
+			// connections and it believes itself to be close to the best
+			// known tip.
+			if !chaincfg.Cfg.DisableListen && s.syncManager.IsCurrent() {
+				// Get address that best matches.
+				lna := s.addrManager.GetBestLocalAddress(sp.NA())
+				if addrmgr.IsRoutable(lna) {
+					// Filter addresses the peer already knows about.
+					addresses := []*protos.NetAddress{lna}
+					sp.pushAddrMsg(addresses)
+				}
+			}
+
+			// Request known addresses if the server address manager needs
+			// more and the peer has a protocol version new enough to
+			// include a timestamp with addresses.
+			if s.addrManager.NeedMoreAddresses() {
+				sp.QueueMessage(protos.NewMsgGetAddr(), nil)
+			}
+
+			// Mark the address as a known good address.
+			s.addrManager.Good(sp.NA())
+		}
+	}
 }
 
 // OnMemPool is invoked when a peer receives a mempool bitcoin message.
@@ -1548,48 +1595,6 @@ func (s *NodeServer) handleAddPeerMsg(state *peerState, sp *serverPeer) bool {
 		}
 	}
 
-	// Update the address' last seen time if the peer has acknowledged
-	// our version and has sent us its version as well.
-	if sp.VerAckReceived() && sp.VersionKnown() && sp.NA() != nil {
-		s.addrManager.Connected(sp.NA())
-	}
-
-	// Asynchronous execution can avoid deadlock.
-	go func() {
-		// Signal the sync manager this peer is a new sync candidate.
-		s.syncManager.NewPeer(sp.Peer)
-
-		// Update the address manager and request known addresses from the
-		// remote peer for outbound connections. This is skipped when running on
-		// the simulation test network since it is only intended to connect to
-		// specified peers and actively avoids advertising and connecting to
-		// discovered peers.
-		if !sp.Inbound() {
-			// Advertise the local address when the server accepts incoming
-			// connections and it believes itself to be close to the best
-			// known tip.
-			if !chaincfg.Cfg.DisableListen && s.syncManager.IsCurrent() {
-				// Get address that best matches.
-				lna := s.addrManager.GetBestLocalAddress(sp.NA())
-				if addrmgr.IsRoutable(lna) {
-					// Filter addresses the peer already knows about.
-					addresses := []*protos.NetAddress{lna}
-					sp.pushAddrMsg(addresses)
-				}
-			}
-
-			// Request known addresses if the server address manager needs
-			// more and the peer has a protocol version new enough to
-			// include a timestamp with addresses.
-			if s.addrManager.NeedMoreAddresses() {
-				sp.QueueMessage(protos.NewMsgGetAddr(), nil)
-			}
-
-			// Mark the address as a known good address.
-			s.addrManager.Good(sp.NA())
-		}
-	}()
-
 	return true
 }
 
@@ -2022,9 +2027,8 @@ out:
 	for {
 		select {
 		// New peers connected to the NodeServer.
-		case p := <-s.newPeers:
-			s.handleAddPeerMsg(state, p)
-
+		case nmsg := <-s.newPeers:
+			nmsg.reply <- s.handleAddPeerMsg(state, nmsg.sp)
 			// Disconnected peers.
 		case p := <-s.donePeers:
 			s.handleDonePeerMsg(state, p)
@@ -2083,8 +2087,13 @@ cleanup:
 }
 
 // AddPeer adds a new peer that has already been connected to the NodeServer.
-func (s *NodeServer) AddPeer(sp *serverPeer) {
-	s.newPeers <- sp
+func (s *NodeServer) AddPeer(sp *serverPeer) bool{
+	reply := make(chan bool)
+	s.newPeers <- newPeerMsg{
+		sp:    sp,
+		reply: reply,
+	}
+	return <-reply
 }
 
 // BanPeer bans a peer that has already been connected to the NodeServer by ip.
@@ -2446,7 +2455,7 @@ func NewServer(db database.Transactor, stateDB database.Database, agentBlacklist
 	s := NodeServer{
 		chainParams:          chainParams,
 		addrManager:          amgr,
-		newPeers:             make(chan *serverPeer, chaincfg.Cfg.MaxPeers),
+		newPeers:             make(chan newPeerMsg),
 		donePeers:            make(chan *serverPeer, chaincfg.Cfg.MaxPeers),
 		banPeers:             make(chan *serverPeer, chaincfg.Cfg.MaxPeers),
 		query:                make(chan interface{}),
