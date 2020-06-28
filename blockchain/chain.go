@@ -1301,6 +1301,7 @@ func (b *BlockChain) connectBestChain(node *blockNode, block *asiutil.Block, vbl
 
 		// Connect the block to the main chain.
 		err = b.connectBlock(node, block, view, stxos, vblock, receipts, logs)
+		log.Debug("exit connectBlock")
 		if err != nil {
 			// If we got hit with a rule error, then we'll mark
 			// that status of the block as invalid and flush the

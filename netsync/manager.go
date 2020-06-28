@@ -1430,6 +1430,8 @@ func (sm *SyncManager) handleBlockchainNotification(notification *blockchain.Not
 		}
 
 		block, ok := notification.Data.(*asiutil.Block)
+		log.Debug("NTBlockAccepted", block.Hash())
+
 		if !ok {
 			log.Warnf("Chain accepted notification is not a block.")
 			break
@@ -1456,6 +1458,7 @@ func (sm *SyncManager) handleBlockchainNotification(notification *blockchain.Not
 			log.Warnf("Chain connected notification is not a block at second element.")
 			break
 		}
+		log.Debug("NTBlockConnected", block.Hash())
 
 		// Remove all of the transactions (except the coinbase) in the
 		// connected block from the transaction pool.  Secondly, remove any
@@ -1488,6 +1491,8 @@ func (sm *SyncManager) handleBlockchainNotification(notification *blockchain.Not
 			sm.makeSignature(block)
 		}
 		sm.tipHeight = block.Height()
+		log.Debug("NTBlockAccepted success", block.Hash())
+
 
 	// A block has been disconnected from the main block chain.
 	case blockchain.NTBlockDisconnected:

@@ -2093,6 +2093,7 @@ func (s *NodeServer) BanPeer(sp *serverPeer) {
 // that are not already known to have it.
 func (s *NodeServer) RelayInventory(invVect *protos.InvVect, data interface{}) {
 	s.relayInv <- relayMsg{invVect: invVect, data: data}
+	srvrLog.Debug("RelayInventory ", invVect)
 }
 
 // BroadcastMessage sends msg to all peers currently connected to the NodeServer
