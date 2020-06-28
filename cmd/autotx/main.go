@@ -9,7 +9,6 @@ import (
     "github.com/AsimovNetwork/asimov/logger"
     "os"
     "path/filepath"
-    "fmt"
 )
 
 var (
@@ -55,19 +54,11 @@ func automain() error {
         return nil
     }
 
-    var mergeUtxoThreshold int32
-    fmt.Println("please input the min merge threshold of utxo(2<=threshold<=600), press enter to continue:")
-    fmt.Scanln(&mergeUtxoThreshold)
-    if mergeUtxoThreshold < 2 || mergeUtxoThreshold > 600 {
-        mainLog.Infof("your input threshold is not in the valid range[2,600], so using default mergeUtxoThreshold: %d", DefaultMergeUtxoThreshold)
-        mergeUtxoThreshold = DefaultMergeUtxoThreshold
-    }
-
     server := Server{
         quit:          make(chan struct{}),
         config:        cfg,
         account:       acc,
-        mergeUtxosThd: mergeUtxoThreshold,
+        mergeUtxosThd: DefaultMergeUtxoThreshold,
     }
     err = server.Start()
     if err != nil {
