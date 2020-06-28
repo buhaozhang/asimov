@@ -1554,38 +1554,41 @@ func (s *NodeServer) handleAddPeerMsg(state *peerState, sp *serverPeer) bool {
 		s.addrManager.Connected(sp.NA())
 	}
 
-	// Signal the sync manager this peer is a new sync candidate.
-	s.syncManager.NewPeer(sp.Peer)
+	// Asynchronous execution can avoid deadlock.
+	go func() {
+		// Signal the sync manager this peer is a new sync candidate.
+		s.syncManager.NewPeer(sp.Peer)
 
-	// Update the address manager and request known addresses from the
-	// remote peer for outbound connections. This is skipped when running on
-	// the simulation test network since it is only intended to connect to
-	// specified peers and actively avoids advertising and connecting to
-	// discovered peers.
-	if !sp.Inbound() {
-		// Advertise the local address when the server accepts incoming
-		// connections and it believes itself to be close to the best
-		// known tip.
-		if !chaincfg.Cfg.DisableListen && s.syncManager.GetCurrent() {
-			// Get address that best matches.
-			lna := s.addrManager.GetBestLocalAddress(sp.NA())
-			if addrmgr.IsRoutable(lna) {
-				// Filter addresses the peer already knows about.
-				addresses := []*protos.NetAddress{lna}
-				sp.pushAddrMsg(addresses)
+		// Update the address manager and request known addresses from the
+		// remote peer for outbound connections. This is skipped when running on
+		// the simulation test network since it is only intended to connect to
+		// specified peers and actively avoids advertising and connecting to
+		// discovered peers.
+		if !sp.Inbound() {
+			// Advertise the local address when the server accepts incoming
+			// connections and it believes itself to be close to the best
+			// known tip.
+			if !chaincfg.Cfg.DisableListen && s.syncManager.IsCurrent() {
+				// Get address that best matches.
+				lna := s.addrManager.GetBestLocalAddress(sp.NA())
+				if addrmgr.IsRoutable(lna) {
+					// Filter addresses the peer already knows about.
+					addresses := []*protos.NetAddress{lna}
+					sp.pushAddrMsg(addresses)
+				}
 			}
-		}
 
-		// Request known addresses if the server address manager needs
-		// more and the peer has a protocol version new enough to
-		// include a timestamp with addresses.
-		if s.addrManager.NeedMoreAddresses() {
-			sp.QueueMessage(protos.NewMsgGetAddr(), nil)
-		}
+			// Request known addresses if the server address manager needs
+			// more and the peer has a protocol version new enough to
+			// include a timestamp with addresses.
+			if s.addrManager.NeedMoreAddresses() {
+				sp.QueueMessage(protos.NewMsgGetAddr(), nil)
+			}
 
-		// Mark the address as a known good address.
-		s.addrManager.Good(sp.NA())
-	}
+			// Mark the address as a known good address.
+			s.addrManager.Good(sp.NA())
+		}
+	}()
 
 	return true
 }

@@ -46,11 +46,11 @@ const (
 
 	// maxStallDuration is the time after which we will disconnect our
 	// current sync peer if we haven't made progress.
-	maxStallDuration = 3 * time.Minute
+	maxStallDuration = 30 * time.Second
 
 	// stallSampleInterval the interval at which we will check to see if our
 	// sync has stalled.
-	stallSampleInterval = 30 * time.Second
+	stallSampleInterval = 5 * time.Second
 
 	maxRejectedSigns = 1000
 
@@ -207,8 +207,6 @@ type SyncManager struct {
 	signedHeight map[int32]interface{}
 	tipHeight    int32
 	BroadcastMessage func(msg protos.Message, exclPeers ...interface{})
-
-	isCurrent int32
 }
 
 // resetHeaderState sets the headers-first mode state to values appropriate for
@@ -655,17 +653,9 @@ func (sm *SyncManager) pushErrorMsg(peer *peerpkg.Peer, rejectMap map[common.Has
 	peer.PushRejectMsg(protos.CmdSig, code, reason, hash, false)
 }
 
-//current returns the result by checkCurrent and store it.
+//current returns the result by checkCurrent with checkAccept is false.
 func (sm *SyncManager) current() bool{
-	cur := sm.checkCurrent(false)
-	if cur && sm.isCurrent == 0 {
-		atomic.StoreInt32(&sm.isCurrent,1)
-	}
-	return cur
-}
-
-func (sm *SyncManager) GetCurrent() bool{
-	return atomic.LoadInt32(&sm.isCurrent) == 1
+	return sm.checkCurrent(false)
 }
 
 // checkCurrent returns true if we believe we are synced with our peers, false if we
