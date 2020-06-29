@@ -151,6 +151,12 @@ type pauseMsg struct {
 	unpause <-chan struct{}
 }
 
+type acceptedTxMsg struct {
+	acceptedTxs []*mining.TxDesc
+	err         error
+	tmsg        *txMsg
+}
+
 // headerNode is used as a node in a list of headers that are linked together
 // between checkpoints.
 type headerNode struct {
@@ -184,6 +190,7 @@ type SyncManager struct {
 	chainParams    *chaincfg.Params
 	progressLogger *blockProgressLogger
 	msgChan        chan interface{}
+	lowMsgChan     chan interface{}
 	wg             sync.WaitGroup
 	quit           chan struct{}
 
@@ -207,6 +214,9 @@ type SyncManager struct {
 	signedHeight map[int32]interface{}
 	tipHeight    int32
 	BroadcastMessage func(msg protos.Message, exclPeers ...interface{})
+
+	TxPendingQueue *list.List
+	accepting      bool
 }
 
 // resetHeaderState sets the headers-first mode state to values appropriate for
@@ -528,14 +538,33 @@ func (sm *SyncManager) updateSyncPeer(dcSyncPeer bool) {
 	sm.startSync()
 }
 
+//acceptTx accept transaction and push result to msgChan.
+func (sm *SyncManager) acceptTx() {
+	if !sm.accepting && sm.TxPendingQueue.Len() > 0 {
+		tempQueue := list.New()
+		tempQueue, sm.TxPendingQueue = sm.TxPendingQueue, tempQueue
+		go func() {
+			for e := tempQueue.Front(); e != nil; e = tempQueue.Front() {
+				tmsg := tempQueue.Remove(e).(*txMsg)
+				// Process the transaction to include validation, insertion in the
+				// memory pool, orphan handling, etc.
+				acceptedTxs, err := sm.txMemPool.ProcessTransaction(tmsg.tx,
+					true, true, mempool.Tag(tmsg.peer.ID()))
+
+				sm.lowMsgChan <- &acceptedTxMsg{
+					acceptedTxs: acceptedTxs,
+					err:         err,
+					tmsg:        tmsg,
+				}
+			}
+		}()
+		sm.accepting = true
+	}
+}
+
 // handleTxMsg handles transaction messages from all peers.
 func (sm *SyncManager) handleTxMsg(tmsg *txMsg) {
 	peer := tmsg.peer
-	state, exists := sm.peerStates[peer]
-	if !exists {
-		log.Warnf("Received tx message from unknown peer %s", peer)
-		return
-	}
 
 	// NOTE:  BitcoinJ, and possibly other wallets, don't follow the spec of
 	// sending an inventory message and allowing the remote peer to decide
@@ -550,16 +579,31 @@ func (sm *SyncManager) handleTxMsg(tmsg *txMsg) {
 	// Ignore transactions that we have already rejected.  Do not
 	// send a reject message here because if the transaction was already
 	// rejected, the transaction was unsolicited.
-	if _, exists = sm.rejectedTxns[*txHash]; exists {
+	if _, exists := sm.rejectedTxns[*txHash]; exists {
 		log.Debugf("Ignoring unsolicited previously rejected "+
 			"transaction %v from %s", txHash, peer)
 		return
 	}
 
-	// Process the transaction to include validation, insertion in the
-	// memory pool, orphan handling, etc.
-	acceptedTxs, err := sm.txMemPool.ProcessTransaction(tmsg.tx,
-		true, true, mempool.Tag(peer.ID()))
+	sm.TxPendingQueue.PushBack(tmsg)
+	sm.acceptTx()
+}
+
+//handleAcceptedTxMsg handles accepted transaction messages.
+func (sm *SyncManager) handleAcceptedTxMsg(amsg *acceptedTxMsg) {
+	sm.accepting = false
+	sm.acceptTx()
+
+	tmsg := amsg.tmsg
+	peer := tmsg.peer
+	state, exists := sm.peerStates[peer]
+	if !exists {
+		log.Warnf("Received tx message from unknown peer %s", peer)
+		return
+	}
+
+	txHash := tmsg.tx.Hash()
+	err := amsg.err
 
 	// Remove transaction from request maps. Either the mempool/chain
 	// already knows about it and as such we shouldn't have any more
@@ -593,7 +637,7 @@ func (sm *SyncManager) handleTxMsg(tmsg *txMsg) {
 		return
 	}
 
-	sm.peerNotifier.AnnounceNewTransactions(acceptedTxs)
+	sm.peerNotifier.AnnounceNewTransactions(amsg.acceptedTxs)
 }
 
 func (sm *SyncManager) handleSigMsg(tmsg *sigMsg) {
@@ -1116,24 +1160,26 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 		}
 	}
 
+	current := sm.current()
+
 	// If this inv contains a block announcement, and this isn't coming from
 	// our current sync peer or we're current, then update the last
 	// announced block for this peer. We'll use this information later to
 	// update the heights of peers based on blocks we've accepted that they
 	// previously announced.
-	if lastBlock != -1 && (peer != sm.syncPeer || sm.current()) {
+	if lastBlock != -1 && (peer != sm.syncPeer || current) {
 		peer.UpdateLastAnnouncedBlock(&invVects[lastBlock].Hash)
 	}
 
 	// Ignore invs from peers that aren't the sync if we are not current.
 	// Helps prevent fetching a mass of orphans.
-	if peer != sm.syncPeer && !sm.current() {
+	if peer != sm.syncPeer && !current {
 		return
 	}
 
 	// If our chain is current and a peer announces a block we already
 	// know of, then update their current block height.
-	if lastBlock != -1 && sm.current() {
+	if lastBlock != -1 && current {
 		blkHeight, err := sm.chain.BlockHeightByHash(&invVects[lastBlock].Hash)
 		if err == nil {
 			peer.UpdateLastBlockHeight(blkHeight)
@@ -1187,14 +1233,19 @@ func (sm *SyncManager) handleInvMsg(imsg *invMsg) {
 			continue
 		}
 		if !haveInv {
-			if iv.Type == protos.InvTypeTx {
+			switch iv.Type {
+			case protos.InvTypeTx:
 				// Skip the transaction if it has already been
 				// rejected.
 				if _, exists := sm.rejectedTxns[iv.Hash]; exists {
 					continue
 				}
+				fallthrough
+			case protos.InvTypeSignature:
+				if !current {
+					continue
+				}
 			}
-
 			// Add it to the request queue.
 			state.requestQueue = append(state.requestQueue, iv)
 			continue
@@ -1326,78 +1377,85 @@ func (sm *SyncManager) limitMap(m map[common.Hash]struct{}, limit int) {
 func (sm *SyncManager) blockHandler() {
 	stallTicker := time.NewTicker(stallSampleInterval)
 	defer stallTicker.Stop()
+
+	handleHighMsg :=func(m interface{}){
+		switch msg := m.(type) {
+		case processBlockMsg:
+			log.Debugf("processBlockMsg: Process block")
+			_, isOrphan, err := sm.chain.ProcessBlock(
+				msg.block, msg.vblock, msg.Receipts, msg.Logs, msg.flags)
+			log.Debugf("process result %v", err)
+			if err != nil {
+				msg.reply <- processBlockResponse{
+					isOrphan: false,
+					err:      err,
+				}
+			}
+
+			msg.reply <- processBlockResponse{
+				isOrphan: isOrphan,
+				err:      nil,
+			}
+		case *newPeerMsg:
+			sm.handleNewPeerMsg(msg.peer)
+		case *blockMsg:
+			sm.handleBlockMsg(msg)
+			msg.reply <- struct{}{}
+		case *donePeerMsg:
+			sm.handleDonePeerMsg(msg.peer)
+		case *invMsg:
+			sm.handleInvMsg(msg)
+		case *sigMsg:
+			sm.handleSigMsg(msg)
+			msg.reply <- struct{}{}
+		case *headersMsg:
+			sm.handleHeadersMsg(msg)
+		case getSyncPeerMsg:
+			var peerID int32
+			if sm.syncPeer != nil {
+				peerID = sm.syncPeer.ID()
+			}
+			msg.reply <- peerID
+		case isCurrentMsg:
+			if msg.checkAccept {
+				msg.reply <- sm.checkCurrent(true)
+			} else {
+				msg.reply <- sm.current()
+			}
+		case pauseMsg:
+			// Wait until the sender unpauses the manager.
+			<-msg.unpause
+		}
+	}
 out:
 	for {
 		select {
 		case m := <-sm.msgChan:
-			switch msg := m.(type) {
-			case *newPeerMsg:
-				sm.handleNewPeerMsg(msg.peer)
-
-			case *txMsg:
-				sm.handleTxMsg(msg)
-				msg.reply <- struct{}{}
-
-			case *sigMsg:
-				sm.handleSigMsg(msg)
-				msg.reply <- struct{}{}
-
-			case *blockMsg:
-				sm.handleBlockMsg(msg)
-				msg.reply <- struct{}{}
-
-			case *invMsg:
-				sm.handleInvMsg(msg)
-
-			case *headersMsg:
-				sm.handleHeadersMsg(msg)
-
-			case *donePeerMsg:
-				sm.handleDonePeerMsg(msg.peer)
-
-			case getSyncPeerMsg:
-				var peerID int32
-				if sm.syncPeer != nil {
-					peerID = sm.syncPeer.ID()
-				}
-				msg.reply <- peerID
-
-			case processBlockMsg:
-				log.Debugf("processBlockMsg: Process block")
-				_, isOrphan, err := sm.chain.ProcessBlock(
-					msg.block, msg.vblock, msg.Receipts, msg.Logs, msg.flags)
-				log.Debugf("process result %v", err)
-				if err != nil {
-					msg.reply <- processBlockResponse{
-						isOrphan: false,
-						err:      err,
-					}
-				}
-
-				msg.reply <- processBlockResponse{
-					isOrphan: isOrphan,
-					err:      nil,
-				}
-
-			case isCurrentMsg:
-				if msg.checkAccept {
-					msg.reply <- sm.checkCurrent(true)
-				} else {
-					msg.reply <- sm.current()
-				}
-
-			case pauseMsg:
-				// Wait until the sender unpauses the manager.
-				<-msg.unpause
-
-			default:
-				log.Warnf("Invalid message type in block "+
-					"handler: %T", msg)
-			}
+			handleHighMsg(m)
 		case <-stallTicker.C:
 			sm.handleStallSample()
 		case <-sm.quit:
 			break out
+		default:
+			select {
+			case m := <-sm.msgChan:
+				handleHighMsg(m)
+			case <-stallTicker.C:
+				sm.handleStallSample()
+			case <-sm.quit:
+				break out
+			case m := <-sm.lowMsgChan:
+				switch msg := m.(type) {
+				case *txMsg:
+					sm.handleTxMsg(msg)
+					msg.reply <- struct{}{}
+				case *acceptedTxMsg:
+					sm.handleAcceptedTxMsg(msg)
+				default:
+					log.Warnf("Invalid message type in block "+
+						"handler: %T", msg)
+				}
+			}
 		}
 	}
 
@@ -1546,7 +1604,7 @@ func (sm *SyncManager) QueueTx(tx *asiutil.Tx, peer *peerpkg.Peer, done chan str
 		return
 	}
 
-	sm.msgChan <- &txMsg{tx: tx, peer: peer, reply: done}
+	sm.lowMsgChan <- &txMsg{tx: tx, peer: peer, reply: done}
 }
 
 func (sm *SyncManager) QueueSig(sig *asiutil.BlockSign, peer *peerpkg.Peer, done chan struct{}) {
@@ -1692,12 +1750,14 @@ func New(config *Config) (*SyncManager, error) {
 		requestedBlocks:  make(map[common.Hash]struct{}),
 		peerStates:       make(map[*peerpkg.Peer]*peerSyncState),
 		progressLogger:   newBlockProgressLogger("Processed", log),
-		msgChan:          make(chan interface{}, config.MaxPeers*3),
+		msgChan:          make(chan interface{}, config.MaxPeers*5),
+		lowMsgChan:       make(chan interface{}, config.MaxPeers*5),
 		headerList:       list.New(),
 		quit:             make(chan struct{}),
 		signedHeight:     make(map[int32]interface{}),
 		account:          config.Account,
 		BroadcastMessage: config.BroadcastMessage,
+		TxPendingQueue:   list.New(),
 	}
 
 	best := sm.chain.BestSnapshot()
