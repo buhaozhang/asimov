@@ -180,7 +180,7 @@ func (b *BlockChain) ProcessBlock(block *asiutil.Block, vblock *asiutil.VBlock,
 	flags common.BehaviorFlags) (bool, bool, error) {
 	b.chainLock.Lock()
 	defer b.chainLock.Unlock()
-
+	log.Debug("ProcessBlock get lock",block.Hash())
 	blockHash := block.Hash()
 
 	// The block must not already exist in the main chain or side chains.

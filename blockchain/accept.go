@@ -99,6 +99,7 @@ func (b *BlockChain) maybeAcceptBlock(block *asiutil.Block, vblock *asiutil.VBlo
 	// Connect the passed block to the chain while respecting proper chain
 	// selection according to the chain with the most proof of work.  This
 	// also handles validation of the transaction scripts.
+	log.Debug("enter connectBestChain",block.Hash())
 	isMainChain, err := b.connectBestChain(newNode, block, vblock, receipts, logs, flags)
 	if err != nil {
 		return false, err

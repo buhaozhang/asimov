@@ -631,7 +631,7 @@ func (b *BlockChain) connectBlock(node *blockNode, block *asiutil.Block,
 		rawdb.WriteReceipts(b.ethDB, *block.Hash(), uint64(block.Height()), receipts)
 	}
 	b.PostChainEvents(nil, allLogs)
-
+	log.Debug("before db update",block.Hash())
 	// Atomically insert info into the database.
 	err = b.db.Update(func(dbTx database.Tx) error {
 		// Update best block state.
@@ -639,14 +639,14 @@ func (b *BlockChain) connectBlock(node *blockNode, block *asiutil.Block,
 		if err != nil {
 			return err
 		}
-
+		log.Debug("exit dbPutBestState",block.Hash())
 		// Add the block hash and height to the block index which tracks
 		// the main chain.
 		err = dbPutBlockIndex(dbTx, block.Hash(), node.height)
 		if err != nil {
 			return err
 		}
-
+		log.Debug("exit dbPutBlockIndex",block.Hash())
 		// Update the utxo set using the state of the utxo view.  This
 		// entails removing all of the utxos spent and adding the new
 		// ones created by the block.
@@ -654,35 +654,35 @@ func (b *BlockChain) connectBlock(node *blockNode, block *asiutil.Block,
 		if err != nil {
 			return err
 		}
-
+		log.Debug("exit dbPutUtxoView",block.Hash())
 		// Update the balance using the state of the utxo view.
 		err = dbPutBalance(dbTx, view)
 		if err != nil {
 			return err
 		}
-
+		log.Debug("exit dbPutBalance",block.Hash())
 		err = dbStoreVBlock(dbTx, vblock)
 		if err != nil {
 			return err
 		}
-
+		log.Debug("exit dbStoreVBlock",block.Hash())
 		err = dbPutLockItem(dbTx, view)
 		if err != nil {
 			return err
 		}
-
+		log.Debug("exit dbPutLockItem",block.Hash())
 		// Update the transaction spend journal by adding a record for
 		// the block that contains all txos spent by it.
 		err = dbPutSpendJournalEntry(dbTx, block.Hash(), stxos)
 		if err != nil {
 			return err
 		}
-
+		log.Debug("exit dbPutSpendJournalEntry",block.Hash())
 		err = dbPutSignViewPoint(dbTx, block.Signs())
 		if err != nil {
 			return err
 		}
-
+		log.Debug("exit dbPutSignViewPoint",block.Hash())
 		// Allow the index manager to call each of the currently active
 		// optional indexes with the block being connected so they can
 		// update themselves accordingly.
@@ -692,7 +692,7 @@ func (b *BlockChain) connectBlock(node *blockNode, block *asiutil.Block,
 				return err
 			}
 		}
-
+		log.Debug("exit indexManager ConnectBlock",block.Hash())
 		return nil
 	})
 	if err != nil {
@@ -1260,7 +1260,7 @@ func (b *BlockChain) connectBestChain(node *blockNode, block *asiutil.Block, vbl
 		view := txo.NewUtxoViewpoint()
 		view.SetBestHash(parentHash)
 		stxos := make([]txo.SpentTxOut, 0, countSpentOutputs(block) + countVtxSpentOutpus(vblock))
-
+		log.Debug("before add",block.Hash())
 		var err error
 		if !fastAdd {
 			var msgvblock protos.MsgVBlock
@@ -1300,8 +1300,9 @@ func (b *BlockChain) connectBestChain(node *blockNode, block *asiutil.Block, vbl
 		}
 
 		// Connect the block to the main chain.
+		log.Debug("enter connectBlock",block.Hash())
 		err = b.connectBlock(node, block, view, stxos, vblock, receipts, logs)
-		log.Debug("exit connectBlock")
+		log.Debug("exit connectBlock",block.Hash())
 		if err != nil {
 			// If we got hit with a rule error, then we'll mark
 			// that status of the block as invalid and flush the
