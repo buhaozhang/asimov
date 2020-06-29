@@ -497,7 +497,6 @@ func (sp *serverPeer) OnTx(_ *peer.Peer, msg *protos.MsgTx) {
 	// from queuing up a bunch of bad transactions before disconnecting (or
 	// being disconnected) and wasting memory.
 	sp.server.syncManager.QueueTx(tx, sp.Peer, sp.txProcessed)
-	<-sp.txProcessed
 }
 
 func (sp *serverPeer) OnSig(_ *peer.Peer, msg *protos.MsgBlockSign) {

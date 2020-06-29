@@ -1405,6 +1405,8 @@ func (sm *SyncManager) blockHandler() {
 			sm.handleDonePeerMsg(msg.peer)
 		case *invMsg:
 			sm.handleInvMsg(msg)
+		case *txMsg:
+			sm.handleTxMsg(msg)
 		case *sigMsg:
 			sm.handleSigMsg(msg)
 			msg.reply <- struct{}{}
@@ -1446,9 +1448,6 @@ out:
 				break out
 			case m := <-sm.lowMsgChan:
 				switch msg := m.(type) {
-				case *txMsg:
-					sm.handleTxMsg(msg)
-					msg.reply <- struct{}{}
 				case *acceptedTxMsg:
 					sm.handleAcceptedTxMsg(msg)
 				default:
@@ -1600,11 +1599,10 @@ func (sm *SyncManager) NewPeer(peer *peerpkg.Peer) {
 func (sm *SyncManager) QueueTx(tx *asiutil.Tx, peer *peerpkg.Peer, done chan struct{}) {
 	// Don't accept more transactions if we're shutting down.
 	if atomic.LoadInt32(&sm.shutdown) != 0 {
-		done <- struct{}{}
 		return
 	}
 
-	sm.lowMsgChan <- &txMsg{tx: tx, peer: peer, reply: done}
+	sm.msgChan <- &txMsg{tx: tx, peer: peer, reply: done}
 }
 
 func (sm *SyncManager) QueueSig(sig *asiutil.BlockSign, peer *peerpkg.Peer, done chan struct{}) {
