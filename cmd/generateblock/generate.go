@@ -40,16 +40,16 @@ func generate(c *generateConfig) bool {
 
 	tip := config.Chain.GetTip()
 	if tip.Height() < config.StartHeight {
-		mainLog.Info("current tip height !=",config.StartHeight)
+		mainLog.Info("current tip height !=", config.StartHeight)
 		return false
 	}
 
-	round :=int64(tip.Round())
+	round := int64(tip.Round())
 	slot := int64(tip.Slot())
 	roundSizei64 := int64(chaincfg.ActiveNetParams.RoundSize)
-	roundStartTime,err := getTargetTime(chaincfg.ActiveNetParams.ChainStartTime,0,roundSizei64,round,0)
-	if err != nil{
-		mainLog.Info("getTargetTime failed :",err.Error())
+	roundStartTime, err := getTargetTime(chaincfg.ActiveNetParams.ChainStartTime, 0, roundSizei64, round, 0)
+	if err != nil {
+		mainLog.Info("getTargetTime failed :", err.Error())
 		return false
 	}
 	interval := config.RoundManager.GetRoundInterval(round)
@@ -63,20 +63,20 @@ func generate(c *generateConfig) bool {
 			interval = config.RoundManager.GetRoundInterval(round)
 		}
 
-		genTime := roundStartTime + interval * slot / roundSizei64 + 1
+		genTime := roundStartTime + interval*slot/roundSizei64 + 1
 		if genTime > time.Now().Unix() {
 			return true
 		}
 
-		acc := getGenAccount(slot,round)
-		if acc == nil{
-			mainLog.Warnf("no private key at round: %v,slot: %v",round,slot)
+		acc := getGenAccount(slot, round)
+		if acc == nil {
+			mainLog.Warnf("no private key at round: %v,slot: %v", round, slot)
 			continue
 		}
 
 		template, err := config.BlockTemplateGenerator.ProduceNewBlock(
 			acc, config.GasFloor, config.GasCeil,
-			genTime, uint32(round), uint16(slot), float64(time.Second * 5 / time.Millisecond))
+			genTime, uint32(round), uint16(slot), float64(time.Second*5/time.Millisecond))
 		if err != nil {
 			mainLog.Errorf("satoshiplus gen block failed to make a block: %v", err)
 			return false
@@ -118,7 +118,7 @@ func getGenAccount(slot, round int64) *crypto.Account {
 		return nil
 	}
 
-	for _,acc := range config.Accounts {
+	for _, acc := range config.Accounts {
 		if *validators[slot] == *acc.Address {
 			return acc
 		}
@@ -128,7 +128,7 @@ func getGenAccount(slot, round int64) *crypto.Account {
 }
 
 // get start time of round, it can be calculated by any older block.
-func  getTargetTime(blockTime int64, round int64, slot int64, targetRound int64, targetSlot int64) (int64, error) {
+func getTargetTime(blockTime int64, round int64, slot int64, targetRound int64, targetSlot int64) (int64, error) {
 	if targetSlot >= int64(chaincfg.ActiveNetParams.RoundSize) {
 		return 0, errors.New("slot must be less than round size")
 	}
@@ -138,7 +138,7 @@ func  getTargetTime(blockTime int64, round int64, slot int64, targetRound int64,
 		return 0, errors.New("getRoundStartTime failed to get round interval")
 	}
 	if round == targetRound {
-		return blockTime + roundInterval * (targetSlot - slot) / int64(chaincfg.ActiveNetParams.RoundSize), nil
+		return blockTime + roundInterval*(targetSlot-slot)/int64(chaincfg.ActiveNetParams.RoundSize), nil
 	}
 	roundsizei64 := int64(chaincfg.ActiveNetParams.RoundSize)
 
@@ -156,7 +156,7 @@ func  getTargetTime(blockTime int64, round int64, slot int64, targetRound int64,
 		} else if i == targetRound {
 			num = targetSlot
 		}
-		curTime = curTime + num * roundInterval / roundsizei64
+		curTime = curTime + num*roundInterval/roundsizei64
 	}
 
 	//when targetRound < round
