@@ -98,10 +98,9 @@ func dumpStacks() {
 
 func writeStack(buf []byte) {
 	mainLog.Infof("\n\n\n\n\n")
-	mainLog.Infof( " dumpstack:" + "\n\n")
+	mainLog.Infof(" dumpstack:" + "\n\n")
 	mainLog.Infof(string(buf))
 }
-
 
 const (
 	// blockDbNamePrefix is the prefix for the block database name.  The
@@ -245,12 +244,12 @@ func flowdMain(serverChan chan<- *servers.NodeServer) error {
 		ProcessBlock:           server.SyncManager().ProcessBlock,
 		IsCurrent:              server.SyncManager().IsCurrentAndCheckAccepted,
 		Chain:                  server.BlockChain(),
-		GasFloor:     common.GasFloor,
-		GasCeil:      common.GasCeil,
-		RoundManager: server.RoundManger(),
+		GasFloor:               common.GasFloor,
+		GasCeil:                common.GasCeil,
+		RoundManager:           server.RoundManger(),
 	}
 
-	genesis, err := ioutil.ReadFile( filepath.Join(chaincfg.DefaultAppDataDir,"gen.json") )
+	genesis, err := ioutil.ReadFile(filepath.Join(chaincfg.DefaultAppDataDir, "gen.json"))
 	if err != nil {
 		return err
 	}
@@ -264,12 +263,12 @@ func flowdMain(serverChan chan<- *servers.NodeServer) error {
 	}
 
 	c.StartHeight = params.StartHeight
-	for _,key := range params.PrivateKeys{
+	for _, key := range params.PrivateKeys {
 		acc, _ := crypto.NewAccount(key)
 		if acc == nil {
 			mainLog.Warn("private key error")
 		}
-		c.Accounts = append(c.Accounts,acc)
+		c.Accounts = append(c.Accounts, acc)
 	}
 
 	if generate(&c) {
