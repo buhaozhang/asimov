@@ -383,7 +383,7 @@ func (sp *serverPeer) OnVersion(_ *peer.Peer, msg *protos.MsgVersion) *protos.Ms
 // OnVerAck is invoked when a peer receives a verack bitcoin message and is used
 // to kick start communication with them.
 func (sp *serverPeer) OnVerAck(_ *peer.Peer, _ *protos.MsgVerAck) {
-	s:= sp.server
+	s := sp.server
 	if s.AddPeer(sp) {
 		// Update the address' last seen time if the peer has acknowledged
 		// our version and has sent us its version as well.
@@ -2087,7 +2087,7 @@ cleanup:
 }
 
 // AddPeer adds a new peer that has already been connected to the NodeServer.
-func (s *NodeServer) AddPeer(sp *serverPeer) bool{
+func (s *NodeServer) AddPeer(sp *serverPeer) bool {
 	reply := make(chan bool)
 	s.newPeers <- newPeerMsg{
 		sp:    sp,
@@ -2604,10 +2604,10 @@ func NewServer(db database.Transactor, stateDB database.Database, agentBlacklist
 		IsCurrent:              s.syncManager.IsCurrentAndCheckAccepted,
 		ProcessSig:             s.sigMemPool.ProcessSig,
 		Chain:                  s.chain,
-		GasFloor:     common.GasFloor,
-		GasCeil:      common.GasCeil,
-		RoundManager: roundManger,
-		Account:      acc,
+		GasFloor:               common.GasFloor,
+		GasCeil:                common.GasCeil,
+		RoundManager:           roundManger,
+		Account:                acc,
 	}
 
 	s.consensus, err = consensus.NewConsensusService(chaincfg.Cfg.Consensustype, &consensusConfig)
@@ -2706,22 +2706,22 @@ func NewServer(db database.Transactor, stateDB database.Database, agentBlacklist
 		// Setup listeners for the configured RPC listen addresses and
 		// TLS settings.
 		serverConfig := &rpcserverConfig{
-			ShutdownRequestChannel:shutdownRequestChannel,
-			Listeners:       nil,
-			StartupTime:     s.startupTime,
-			ConnMgr:         &rpcConnManager{&s},
-			SyncMgr:         &rpcSyncMgr{&s, s.syncManager},
-			TimeSource:      s.timeSource,
-			Chain:           s.chain,
-			ChainParams:     chainParams,
-			DB:              db,
-			TxMemPool:       s.txMemPool,
-			TxIndex:         s.txIndex,
-			AddrIndex:       s.addrIndex,
-			CfIndex:         s.cfIndex,
-			Nap:             nap,
-			ConsensusServer: s.consensus,
-			ContractMgr:     contractManager,
+			ShutdownRequestChannel: shutdownRequestChannel,
+			Listeners:              nil,
+			StartupTime:            s.startupTime,
+			ConnMgr:                &rpcConnManager{&s},
+			SyncMgr:                &rpcSyncMgr{&s, s.syncManager},
+			TimeSource:             s.timeSource,
+			Chain:                  s.chain,
+			ChainParams:            chainParams,
+			DB:                     db,
+			TxMemPool:              s.txMemPool,
+			TxIndex:                s.txIndex,
+			AddrIndex:              s.addrIndex,
+			CfIndex:                s.cfIndex,
+			Nap:                    nap,
+			ConsensusServer:        s.consensus,
+			ContractMgr:            contractManager,
 
 			BlockTemplateGenerator: blockTemplateGenerator,
 		}
@@ -3028,4 +3028,8 @@ func (s *NodeServer) RoundManger() *satoshiplus.RoundManager {
 
 func (s *NodeServer) BlkTmplGenerator() *mining.BlkTmplGenerator {
 	return s.blkTmplGenerator
+}
+
+func (s *NodeServer) SigMemPool() *mempool.SigPool {
+	return s.sigMemPool
 }

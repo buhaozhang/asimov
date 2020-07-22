@@ -247,6 +247,7 @@ func flowdMain(serverChan chan<- *servers.NodeServer) error {
 		GasFloor:               common.GasFloor,
 		GasCeil:                common.GasCeil,
 		RoundManager:           server.RoundManger(),
+		ProcessSig:             server.SigMemPool().ProcessSig,
 	}
 
 	genesis, err := ioutil.ReadFile(filepath.Join(chaincfg.DefaultAppDataDir, "gen.json"))

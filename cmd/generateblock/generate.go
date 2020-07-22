@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/ecdsa"
 	"errors"
 	"github.com/AsimovNetwork/asimov/ainterface"
 	"github.com/AsimovNetwork/asimov/asiutil"
@@ -9,6 +10,7 @@ import (
 	"github.com/AsimovNetwork/asimov/common"
 	"github.com/AsimovNetwork/asimov/crypto"
 	"github.com/AsimovNetwork/asimov/mining"
+	"github.com/AsimovNetwork/asimov/protos"
 	"time"
 )
 
@@ -47,7 +49,7 @@ func generate(c *generateConfig) bool {
 	round := int64(tip.Round())
 	slot := int64(tip.Slot())
 	roundSizei64 := int64(chaincfg.ActiveNetParams.RoundSize)
-	roundStartTime, err := getTargetTime(chaincfg.ActiveNetParams.ChainStartTime, 0, roundSizei64, round, 0)
+	roundStartTime, err := getTargetTime(chaincfg.ActiveNetParams.ChainStartTime, 0, roundSizei64 - 1, round, 0)
 	if err != nil {
 		mainLog.Info("getTargetTime failed :", err.Error())
 		return false
@@ -95,9 +97,45 @@ func generate(c *generateConfig) bool {
 				template.Block.Height(), template.Block.Hash(),
 				len(template.Block.MsgBlock().PreBlockSigs), len(template.Block.Transactions()))
 		}
+
+		makeSignature(template.Block)
 	}
 
 	return false
+}
+
+func makeSignature(block *asiutil.Block) {
+	header := &block.MsgBlock().Header
+
+	for _,acc := range config.Accounts{
+		if header.CoinBase == *acc.Address {
+			continue
+		}
+
+		_, weightMap, _ := config.Chain.GetValidators(header.Round)
+
+		if _, ok := weightMap[*acc.Address]; !ok {
+			continue
+		}
+
+		blockHash := block.MsgBlock().BlockHash()
+
+		signature, err := crypto.Sign(blockHash[:], (*ecdsa.PrivateKey)(&acc.PrivateKey))
+		if err != nil {
+			mainLog.Errorf("Sign error:%s.", err)
+			continue
+		}
+
+		var sigMsg protos.MsgBlockSign
+		copy(sigMsg.Signature[:], signature)
+		sigMsg.BlockHeight = header.Height
+		sigMsg.BlockHash = blockHash
+		sigMsg.Signer = *acc.Address
+
+		sig := asiutil.NewBlockSign(&sigMsg)
+
+		config.ProcessSig(sig)
+	}
 }
 
 func getGenAccount(slot, round int64) *crypto.Account {
@@ -145,7 +183,7 @@ func getTargetTime(blockTime int64, round int64, slot int64, targetRound int64, 
 	curTime := blockTime
 	//when targetRound > round
 	for i := round; i <= targetRound; i++ {
-		roundInterval = config.RoundManager.GetRoundInterval(round)
+		roundInterval = config.RoundManager.GetRoundInterval(i)
 		if roundInterval == 0 {
 			return 0, errors.New("getRoundStartTime failed to get round interval")
 		}
@@ -161,7 +199,7 @@ func getTargetTime(blockTime int64, round int64, slot int64, targetRound int64, 
 
 	//when targetRound < round
 	for i := targetRound; i <= round; i++ {
-		roundInterval = config.RoundManager.GetRoundInterval(round)
+		roundInterval = config.RoundManager.GetRoundInterval(i)
 		if roundInterval == 0 {
 			return 0, errors.New("getRoundStartTime failed to get round interval")
 		}
